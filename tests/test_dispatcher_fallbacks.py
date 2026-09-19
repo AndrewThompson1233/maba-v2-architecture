@@ -55,7 +55,7 @@ def isolate_chaos_environment(monkeypatch):
     clear_fallback_warnings()
 
 
-class TestAdversarialExceptionInjection:
+class TestExceptionInjection:
 
     @pytest.mark.parametrize("exc_class,exc_args", [
         (ZeroDivisionError, ("division by zero in CUDA threadblock",)),
@@ -173,7 +173,7 @@ class TestAdversarialExceptionInjection:
             dispatch_dgda_step(q, k, v, alpha, b, w)
 
 
-class TestAdversarialDynamicBackendSwitching:
+class TestDynamicBackendSwitching:
 
     def test_rapid_backend_toggle_loop_100_iterations(self, monkeypatch):
         backends_cycle = ["reference", "cpu", "auto", "ref", "pytorch", "openmp"]
@@ -294,7 +294,7 @@ class TestAdversarialDynamicBackendSwitching:
                 os.environ["MABA_BACKEND"] = orig_backend
 
 
-class TestAdversarialExtremeShapesAndDtypes:
+class TestExtremeShapesAndDtypes:
 
     @pytest.mark.parametrize("L", [1, 3, 17, 33, 65, 129, 0, 7, 31, 127, 255, 513])
     def test_prefill_odd_and_non_power_of_two_sequence_lengths(self, L: int):
@@ -432,7 +432,7 @@ class TestAdversarialExtremeShapesAndDtypes:
             dispatch_dgda_prefill(q_int, k_int, v_int, alpha_int, b_int, w_int)
 
 
-class TestAdversarialAutogradGraphUnbrokenness:
+class TestAutogradGraphUnbrokenness:
 
     @pytest.mark.parametrize("exc_class", [
         ZeroDivisionError,

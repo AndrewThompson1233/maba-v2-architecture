@@ -483,7 +483,7 @@ class TestDispatcherRoutingAndFallback:
 
 
 
-class TestExtremeAdversarialStress:
+class TestIndexerBoundaryStress:
 
     def test_adversarial_all_zero_inputs(self):
         device = "cuda" if CUDA_AVAILABLE else "cpu"

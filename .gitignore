@@ -1,26 +1,45 @@
-# Python & PyTorch artifacts
+# Python bytecode & caching
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
+.pytest_cache/
+
+# Model checkpoints & weights
+checkpoints/
 *.pt
 *.pth
 *.bin
+*.safetensors
+*.ckpt
 
-# Testing
-.pytest_cache/
+# Datasets & local data caches
+data/
+.cache/
+*.parquet
+*.arrow
+*.jsonl
+assets/dialogs_clean.json
 
-# Packaging
+# Developer scripts & scratch harnesses (ignored for Hugging Face / GitHub releases)
+scripts/
+
+# Build & packaging
 *.egg-info/
 build/
 dist/
 
-# Logs & temp
+# Logs, runs & temp files
 *.log
+wandb/
+runs/
+tmp/
 .DS_Store
 
-# Internal agent logs & local reports
-KERNEL_ENGINE_PROGRESS.md
-TEST_INFRA.md
-TEST_READY.md
-.agents/
-*.agent.md
+# IDE and editor settings
+.idea/
+.vscode/
+
+# HuggingFace & Git metadata
+.huggingface/
+

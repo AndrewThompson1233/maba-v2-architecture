@@ -86,7 +86,7 @@ def _generate_adversarial_inputs(
     return q, k, v, alpha, b, w, s0
 
 
-class TestChallengerDecayRegimes:
+class TestDecayRegimes:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="CUDA/Triton unavailable")
     @pytest.mark.parametrize("regime", ["alpha_near_1", "alpha_strictly_1", "alpha_near_0", "mixed_alpha"])
@@ -130,7 +130,7 @@ class TestChallengerDecayRegimes:
         )
 
 
-class TestChallengerExtremeGatesAndGeometry:
+class TestExtremeGatesAndGeometry:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="CUDA/Triton unavailable")
     def test_triton_colinear_keys_catastrophic_divergence(self):
@@ -176,7 +176,7 @@ class TestChallengerExtremeGatesAndGeometry:
         assert diff_state < 1e-4, f"Triton gate state diff {diff_state:.6e} exceeded 1e-4 under {regime}"
 
 
-class TestChallengerPrecisionBounds:
+class TestPrecisionBounds:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="CUDA/Triton unavailable")
     @pytest.mark.parametrize("L", [16, 32, 64, 128, 256])
@@ -196,7 +196,7 @@ class TestChallengerPrecisionBounds:
         )
 
 
-class TestChallengerHeadDimensions:
+class TestHeadDimensions:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="CUDA/Triton unavailable")
     @pytest.mark.parametrize("head_dim", [32, 128])

@@ -11,7 +11,7 @@ from maba_sparse.config import MabaSparseConfig
 from maba_sparse.layers.dgda import DGDALayer
 
 
-class TestChallengerCausalIsolation:
+class TestCausalIsolation:
 
     @pytest.mark.parametrize("chunk_size", [16, 32])
     @pytest.mark.parametrize("L", [32, 64])
@@ -102,7 +102,7 @@ class TestChallengerCausalIsolation:
         assert past_grad_max > 0.0, "Past tokens should have non-zero gradient"
 
 
-class TestChallengerMemoryInvariance:
+class TestMemoryInvariance:
 
     def test_o1_state_byte_size_invariance(self):
         config = MabaSparseConfig()
@@ -165,7 +165,7 @@ class TestChallengerMemoryInvariance:
         assert len(set(state_sizes)) == 1, "State size mutated during decode steps"
 
 
-class TestChallengerStepVsForwardEquivalence:
+class TestStepVsForwardEquivalence:
 
     @pytest.mark.parametrize("L", [16, 32, 48, 64, 128])
     def test_step_loop_vs_forward_standard_input(self, L: int):
@@ -257,7 +257,7 @@ class TestChallengerStepVsForwardEquivalence:
 
 def run_standalone_measurements():
     print("=" * 80)
-    print("EMPIRICAL CHALLENGER STRESS HARNESS EXECUTION")
+    print("Causal Isolation & Memory Invariance Harness")
     print("=" * 80)
 
     print("\n--- 1. Causal Masking Isolation Verification ---")

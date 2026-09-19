@@ -15,7 +15,7 @@ CUDA_AVAILABLE = torch.cuda.is_available() and is_cuda_sm75_available()
 DEVICE = "cuda" if CUDA_AVAILABLE else "cpu"
 
 
-class TestDGDAStepMemoryInvarianceAdversarial:
+class TestDGDAStepMemoryInvariance:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="Requires CUDA sm_75+ GPU")
     @pytest.mark.parametrize("history_len", [0, 64, 256, 512, 1024, 2048, 4096])
@@ -247,7 +247,7 @@ class TestDGDAStepMemoryInvarianceAdversarial:
         assert max_state_diff < 5e-4, f"State divergence between forward and step: {max_state_diff}"
 
 
-class TestFullModelDecodeMemoryScalingAdversarial:
+class TestFullModelDecodeMemoryScaling:
 
     @pytest.mark.skipif(not CUDA_AVAILABLE, reason="Requires CUDA sm_75+ GPU")
     @pytest.mark.parametrize("history_len", [64, 256, 512, 1024, 2048])
