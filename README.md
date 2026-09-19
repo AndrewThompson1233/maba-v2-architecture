@@ -1,3 +1,41 @@
+---
+language:
+- en
+license: other
+license_name: moal-1.0
+license_link: LICENSE
+library_name: transformers
+pipeline_tag: text-generation
+tags:
+- maba
+- maba-v2
+- maba-v2-architecture
+- architecture
+- recurrent
+- dgda
+- linear-attention
+- linear-recurrence
+- sparse-attention
+- maba-sa
+- mla
+- nope
+- dg-indexer
+- centroid-indexing
+- hca
+- 3-stream
+- swiglu
+- rmsnorm
+- speculative-decoding
+- mtp
+- scaling
+- 100m
+- 1b
+- 3b
+- 7b
+- 30b
+- pytorch
+---
+
 <div align="center">
   <img src="assets/logo.svg" width="128" alt="Maba v2 Logo"/>
   <h1>Maba v2 Architecture</h1>
