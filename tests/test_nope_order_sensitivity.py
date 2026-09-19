@@ -1,16 +1,3 @@
-"""NoPE (No Positional Embeddings) Order-Sensitivity Verification Test Suite.
-
-Validates Architectural Directive 3:
-Because MABA-SA attention layers rely on strict NoPE (zero positional embeddings),
-temporal and sequence order information is injected and conveyed strictly through
-the interleaved 75% DGDA recurrence layers via per-channel exponential decay alpha_t.
-
-Tests verify:
-1. Permuted token sequences ('A before B' vs 'B before A') yield distinct hidden representations.
-2. Norm difference ||M(S_1) - M(S_2)||_2 > 1e-2 across macro-stack layers.
-3. DGDA decay alpha_t is the causal driver of order discrimination without positional embeddings.
-4. Zero positional embedding parameters in MABA-SA attention layers.
-"""
 
 import pytest
 import torch
@@ -23,7 +10,6 @@ from maba_sparse.model import MabaSparseForCausalLM, get_101m_config
 
 
 class TestNoPEOrderSensitivity:
-    """Verifies that sequence order sensitivity is transmitted through DGDA recurrence without NoPE."""
 
     @pytest.fixture
     def small_model(self):
@@ -45,9 +31,6 @@ class TestNoPEOrderSensitivity:
         return model
 
     def test_token_permutation_order_sensitivity(self, small_model):
-        """Verify that swapping token order ('A before B' vs 'B before A') produces distinct outputs."""
-        # S1: [A, B, C, D]
-        # S2: [B, A, C, D]
         s1 = torch.tensor([[100, 200, 300, 400]])
         s2 = torch.tensor([[200, 100, 300, 400]])
 
@@ -55,19 +38,15 @@ class TestNoPEOrderSensitivity:
             out1 = small_model(s1)
             out2 = small_model(s2)
 
-        logits1 = out1.logits  # [1, 4, V]
-        logits2 = out2.logits  # [1, 4, V]
+        logits1 = out1.logits
+        logits2 = out2.logits
 
-        # Representations at position index 3 (token C/D) must differ significantly
         diff_norm = torch.norm(logits1[:, -1, :] - logits2[:, -1, :], p=2).item()
         assert (
             diff_norm > 1e-2
         ), f"Expected order sensitivity ||L(S1) - L(S2)||_2 > 0.01, got {diff_norm:.6f}"
 
     def test_semantic_sentence_permutation(self, small_model):
-        """Test with synthetic representation of 'The cat chased the mouse' vs 'The mouse chased the cat'."""
-        # Tokens:
-        # "The" = 10, "cat" = 25, "chased" = 50, "the" = 10, "mouse" = 75
         cat_chased_mouse = torch.tensor([[10, 25, 50, 10, 75]])
         mouse_chased_cat = torch.tensor([[10, 75, 50, 10, 25]])
 
@@ -81,13 +60,11 @@ class TestNoPEOrderSensitivity:
         ), f"Sentences must produce distinct representations, got diff={diff:.6f}"
 
     def test_dgda_decay_is_order_mechanism(self):
-        """Verify directly on DGDA layer that decay alpha_t produces distinct states for permuted inputs."""
         torch.manual_seed(42)
         cfg = MabaSparseConfig(dim=64, n_heads=2, d_head=32)
         layer = DGDALayer(cfg)
         layer.eval()
 
-        # Two inputs with identical tokens in reverse order
         x1 = torch.randn(1, 8, 64)
         x2 = torch.flip(x1, dims=[1])
 
@@ -102,7 +79,6 @@ class TestNoPEOrderSensitivity:
         assert out_diff > 1e-3, f"DGDA outputs must depend on token order: {out_diff}"
 
     def test_attention_layers_have_no_positional_embeddings(self):
-        """Confirm strict NoPE in MabaSparseAttention: zero positional embeddings or rotary parameters."""
         cfg = get_101m_config()
         model = MabaSparseForCausalLM(cfg)
 

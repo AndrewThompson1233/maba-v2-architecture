@@ -1,11 +1,3 @@
-"""Comprehensive, requirement-driven, opaque-box E2E test suite for Maba v1.5 Hardware Acceleration Engine.
-
-This test suite validates the 4-tier testing hierarchy specified in TEST_INFRA.md and PROJECT.md:
-- Tier 1: Feature Coverage (>=5 tests per feature across 6 kernel primitives)
-- Tier 2: Boundary & Corner Cases (>=5 tests per feature across 5 boundary dimensions)
-- Tier 3: Cross-Feature Combinations & Integrations
-- Tier 4: Real-World Application Scenarios
-"""
 
 import math
 import os
@@ -19,16 +11,7 @@ from maba_sparse.config import MabaSparseConfig
 from maba_sparse.model import MabaSparseForCausalLM
 
 
-# ==============================================================================
-# Mathematical Reference Engine & Progressive Testability Adapter
-# ==============================================================================
-
 class ReferenceKernelEngine:
-    """Authoritative reference implementation of PROJECT.md Interface Contracts.
-
-    Provides exact mathematical ground truth for opaque-box testing and guarantees
-    progressive testability across fallback and accelerated execution targets.
-    """
 
     @staticmethod
     def get_backend(device: Union[torch.device, str]) -> str:
@@ -149,7 +132,6 @@ class ReferenceKernelEngine:
         return gl * o_local + gs * o_sparse + gh * o_hca
 
 
-# Dynamic import for progressive testability with graceful fallback
 try:
     from maba_sparse.kernels import dispatcher as active_dispatcher
 except (ImportError, ModuleNotFoundError):
@@ -157,16 +139,10 @@ except (ImportError, ModuleNotFoundError):
 
 
 def get_dispatcher():
-    """Return active hardware dispatcher if available, otherwise reference engine."""
     return active_dispatcher
 
 
-# ==============================================================================
-# TIER 1: FEATURE COVERAGE (>=5 tests per feature)
-# ==============================================================================
-
 class TestTier1DispatcherRouting:
-    """Feature 1: Multi-Device Backend Dispatcher Routing."""
 
     def test_routing_cpu_default(self):
         disp = get_dispatcher()
@@ -197,7 +173,6 @@ class TestTier1DispatcherRouting:
 
 
 class TestTier1DispatcherFallback:
-    """Feature 2: Graceful Fallback & Fail-Safe Mechanisms."""
 
     def test_fallback_unsupported_device(self):
         disp = get_dispatcher()
@@ -267,7 +242,6 @@ class TestTier1DispatcherFallback:
 
 
 class TestTier1DGDAPrefillInterface:
-    """Feature 3: Fused DGDA Chunkwise Recurrence Prefill."""
 
     def test_prefill_output_and_state_shapes(self):
         disp = get_dispatcher()
@@ -350,7 +324,6 @@ class TestTier1DGDAPrefillInterface:
 
 
 class TestTier1DGDAStepInterface:
-    """Feature 4: Fused DGDA Single-Step Decode Recurrence."""
 
     def test_step_output_and_state_shapes(self):
         disp = get_dispatcher()
@@ -400,7 +373,7 @@ class TestTier1DGDAStepInterface:
         k = F.normalize(torch.ones(B, H, dk), p=2, dim=-1)
         v = torch.zeros(B, H, dv)
         alpha = torch.ones(B, H, dk)
-        b = torch.ones(B, H, dk)  # Erase fully
+        b = torch.ones(B, H, dk)
         w = torch.zeros(B, H, dv)
 
         out, new_state = disp.dispatch_dgda_step(q, k, v, alpha, b, w, state)
@@ -443,7 +416,6 @@ class TestTier1DGDAStepInterface:
 
 
 class TestTier1CentroidPooling:
-    """Feature 5: Accelerated Hybrid Centroid Pooling."""
 
     def test_centroid_pooling_shape(self):
         disp = get_dispatcher()
@@ -454,7 +426,6 @@ class TestTier1CentroidPooling:
 
     def test_centroid_hybrid_formula_exact(self):
         disp = get_dispatcher()
-        # Deterministic inputs: 1 sequence of length 4 with d_idx=2
         k_idx = torch.tensor([[[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [7.0, 8.0]]])
         c = disp.dispatch_compute_centroids(k_idx, block_size=4)
 
@@ -495,7 +466,6 @@ class TestTier1CentroidPooling:
 
 
 class TestTier1TopKGather:
-    """Feature 6: Fused Top-k Block Gather & Logarithmic Distance Penalty."""
 
     def test_topk_gather_output_shape(self):
         disp = get_dispatcher()
@@ -508,12 +478,9 @@ class TestTier1TopKGather:
     def test_topk_logarithmic_distance_penalty(self):
         disp = get_dispatcher()
         B, L, nb, d_idx = 1, 64, 2, 4
-        # Same query across all tokens
         q_idx = torch.ones(B, L, d_idx)
-        # Block 0 and Block 1 identical centroids
         centroids = torch.ones(B, nb, d_idx)
         idx = disp.dispatch_index_topk(q_idx, centroids, lambda_dist=1.0, top_k=1, block_size=64)
-        # For block 0 tokens, block 0 distance = 0, block 1 distance is causal masked or penalised
         assert (idx == 0).all()
 
     def test_topk_causal_masking_strictness(self):
@@ -522,10 +489,7 @@ class TestTier1TopKGather:
         q_idx = torch.randn(B, L, d_idx)
         centroids = torch.randn(B, nb, d_idx)
         idx = disp.dispatch_index_topk(q_idx, centroids, top_k=2, block_size=64)
-        # For tokens in block 0 (t < 64), only block 0 is a valid causal past block,
-        # so the highest-priority selected block (rank 0) MUST be block 0.
         assert (idx[:, :64, 0] == 0).all()
-        # For tokens in block 1 (t >= 64), both block 0 and block 1 are past/current
         assert (idx[:, 64:, 0] <= 1).all()
         assert (idx[:, 64:, 1] <= 1).all()
 
@@ -534,7 +498,6 @@ class TestTier1TopKGather:
         B, L, nb, d_idx = 1, 64, 1, 16
         q_idx = torch.randn(B, L, d_idx)
         centroids = torch.randn(B, nb, d_idx)
-        # Request top-32 when only 1 block exists
         idx = disp.dispatch_index_topk(q_idx, centroids, top_k=32, block_size=64)
         assert idx.shape == (B, L, 1)
 
@@ -549,7 +512,6 @@ class TestTier1TopKGather:
 
 
 class TestTier1StreamSuperposition:
-    """Feature 7: Fused 3-Stream Output Superposition."""
 
     def test_superposition_output_shape(self):
         disp = get_dispatcher()
@@ -568,7 +530,6 @@ class TestTier1StreamSuperposition:
         ol = torch.full((B, H, L, D), 1.0)
         os = torch.full((B, H, L, D), 2.0)
         oh = torch.full((B, H, L, D), 3.0)
-        # Equal weights (logits = 0 -> probs = 1/3)
         logits = torch.zeros(B, L, 3)
 
         out = disp.dispatch_stream_superposition(ol, os, oh, logits)
@@ -604,19 +565,13 @@ class TestTier1StreamSuperposition:
         ol = torch.full((B, H, L, D), 10.0)
         os = torch.full((B, H, L, D), 20.0)
         oh = torch.full((B, H, L, D), 30.0)
-        # Strongly favor local stream
         logits = torch.tensor([[[100.0, -100.0, -100.0], [100.0, -100.0, -100.0]]])
 
         out = disp.dispatch_stream_superposition(ol, os, oh, logits)
         assert torch.allclose(out, ol, atol=1e-4)
 
 
-# ==============================================================================
-# TIER 2: BOUNDARY & CORNER CASES (>=5 tests per feature)
-# ==============================================================================
-
 class TestTier2SeqLenBoundaries:
-    """Boundary 1: Sequence Length Extremes."""
 
     def test_seq_len_one(self):
         disp = get_dispatcher()
@@ -681,7 +636,6 @@ class TestTier2SeqLenBoundaries:
 
 
 class TestTier2ChunkMisalignment:
-    """Boundary 2: Sequence Lengths not Multiples of Chunk Size C=16."""
 
     @pytest.mark.parametrize("L", [17, 31, 33, 63, 79])
     def test_chunk_misalignment_lengths(self, L):
@@ -702,7 +656,6 @@ class TestTier2ChunkMisalignment:
 
 
 class TestTier2BlockMisalignment:
-    """Boundary 3: Sequence Lengths not Multiples of Block Size B=64."""
 
     @pytest.mark.parametrize("L", [65, 100, 127, 129, 255])
     def test_block_misalignment_lengths(self, L):
@@ -719,7 +672,6 @@ class TestTier2BlockMisalignment:
 
 
 class TestTier2BatchSizeExtremes:
-    """Boundary 4: Batch Size Scaling and Odd Shapes."""
 
     @pytest.mark.parametrize("B", [1, 3, 7, 16, 32])
     def test_batch_size_extremes(self, B):
@@ -738,7 +690,6 @@ class TestTier2BatchSizeExtremes:
 
 
 class TestTier2NumericalStress:
-    """Boundary 5: Zero Inputs, Singularity Decays, Extreme Logits."""
 
     def test_all_zero_inputs(self):
         disp = get_dispatcher()
@@ -760,7 +711,7 @@ class TestTier2NumericalStress:
         q = torch.randn(B, H, L, dk)
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
         v = torch.randn(B, H, L, dv)
-        alpha = torch.full_like(q, 1e-6)  # Rapid state decay
+        alpha = torch.full_like(q, 1e-6)
         b = torch.full_like(q, 0.5)
         w = torch.full_like(v, 0.5)
 
@@ -774,7 +725,7 @@ class TestTier2NumericalStress:
         q = torch.randn(B, H, L, dk)
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
         v = torch.randn(B, H, L, dv)
-        alpha = torch.full_like(q, 1.0 - 1e-6)  # Perfect memory retention
+        alpha = torch.full_like(q, 1.0 - 1e-6)
         b = torch.full_like(q, 0.5)
         w = torch.full_like(v, 0.5)
 
@@ -789,11 +740,9 @@ class TestTier2NumericalStress:
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
         v = torch.randn(B, H, L, dv)
         alpha = torch.full_like(q, 0.9)
-        # Case 1: b=1, w=0
         out1, s1 = disp.dispatch_dgda_prefill(q, k, v, alpha, torch.ones_like(q), torch.zeros_like(v))
         assert torch.isfinite(out1).all()
 
-        # Case 2: b=0, w=1
         out2, s2 = disp.dispatch_dgda_prefill(q, k, v, alpha, torch.zeros_like(q), torch.ones_like(v))
         assert torch.isfinite(out2).all()
 
@@ -810,19 +759,13 @@ class TestTier2NumericalStress:
         assert not torch.isnan(out).any()
 
 
-# ==============================================================================
-# TIER 3: CROSS-FEATURE COMBINATIONS & INTEGRATION
-# ==============================================================================
-
 class TestTier3CrossFeatureCombinations:
-    """Pairwise interactions, mixed precision, and distributed simulation."""
 
     def test_dgda_indexer_superposition_pipeline(self):
         disp = get_dispatcher()
         B, L = 2, 64
         H, dk, dv = 2, 32, 32
 
-        # 1. Recurrence
         q = torch.randn(B, H, L, dk)
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
         v = torch.randn(B, H, L, dv)
@@ -831,14 +774,12 @@ class TestTier3CrossFeatureCombinations:
         w = torch.full_like(v, 0.5)
         o_dgda, _ = disp.dispatch_dgda_prefill(q, k, v, alpha, b, w)
 
-        # 2. Centroid Indexing
         k_idx = torch.randn(B, L, 32)
         centroids = disp.dispatch_compute_centroids(k_idx, block_size=32)
         q_idx = torch.randn(B, L, 32)
         idx = disp.dispatch_index_topk(q_idx, centroids, top_k=2, block_size=32)
         assert idx.shape == (B, L, 2)
 
-        # 3. 3-Stream Superposition
         o_sparse = torch.randn_like(o_dgda)
         o_hca = torch.randn_like(o_dgda)
         logits = torch.randn(B, L, 3)
@@ -866,9 +807,7 @@ class TestTier3CrossFeatureCombinations:
     def test_ddp_gradient_sync_simulation(self):
         disp = get_dispatcher()
         B, H, L, dk, dv = 2, 2, 8, 16, 16
-        # Worker 1
         q1 = torch.randn(B, H, L, dk, requires_grad=True)
-        # Worker 2
         q2 = torch.randn(B, H, L, dk, requires_grad=True)
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
         v = torch.randn(B, H, L, dv)
@@ -882,7 +821,6 @@ class TestTier3CrossFeatureCombinations:
         loss = o1.sum() + o2.sum()
         loss.backward()
 
-        # Simulated All-Reduce average
         avg_grad = 0.5 * (q1.grad + q2.grad)
         assert torch.isfinite(avg_grad).all()
 
@@ -907,10 +845,8 @@ class TestTier3CrossFeatureCombinations:
         b = torch.full((B, H, L1 + L2, dk), 0.5)
         w = torch.full((B, H, L1 + L2, dv), 0.5)
 
-        # Monolithic prefill
         full_out, full_state = disp.dispatch_dgda_prefill(q, k, v, alpha, b, w)
 
-        # Segmented: Prefill L1, then step L2
         out_p1, state_p1 = disp.dispatch_dgda_prefill(
             q[:, :, :L1], k[:, :, :L1], v[:, :, :L1], alpha[:, :, :L1], b[:, :, :L1], w[:, :, :L1]
         )
@@ -929,12 +865,7 @@ class TestTier3CrossFeatureCombinations:
         assert torch.allclose(curr_state, full_state, atol=1e-4)
 
 
-# ==============================================================================
-# TIER 4: REAL-WORLD APPLICATION SCENARIOS
-# ==============================================================================
-
 class TestTier4RealWorldScenarios:
-    """Full-model real-world training, generation, convergence, and scaling."""
 
     @pytest.fixture
     def small_model(self):
@@ -953,7 +884,6 @@ class TestTier4RealWorldScenarios:
         return MabaSparseForCausalLM(cfg)
 
     def test_autoregressive_generation_loop(self, small_model):
-        """Validates prompt prefill followed by multi-token autoregressive generation."""
         small_model.eval()
         prompt = torch.randint(0, 100, (1, 8))
         with torch.no_grad():
@@ -962,13 +892,11 @@ class TestTier4RealWorldScenarios:
         assert torch.equal(gen[:, :8], prompt)
 
     def test_end_to_end_training_step(self, small_model):
-        """Validates forward + loss + backward + optimizer step convergence."""
         small_model.train()
         optimizer = torch.optim.AdamW(small_model.parameters(), lr=1e-3)
         x = torch.randint(0, 100, (2, 16))
         targets = torch.randint(0, 100, (2, 16))
 
-        # Capture initial weight
         initial_param = next(small_model.parameters()).clone()
 
         out = small_model(x, targets=targets)
@@ -984,7 +912,6 @@ class TestTier4RealWorldScenarios:
         assert diff > 0.0, "Weights must update after optimizer step"
 
     def test_loss_convergence_synthetic_task(self, small_model):
-        """Validates loss decreases monotonically on an overfitted sequence."""
         small_model.train()
         optimizer = torch.optim.AdamW(small_model.parameters(), lr=5e-3)
         x = torch.randint(0, 100, (1, 16))
@@ -999,11 +926,9 @@ class TestTier4RealWorldScenarios:
             optimizer.step()
             losses.append(loss.item())
 
-        # Loss at the end should be strictly lower than at start
         assert losses[-1] < losses[0], f"Loss failed to decrease: start={losses[0]}, end={losses[-1]}"
 
     def test_memory_invariance_long_context(self):
-        """Validates recurrent state footprint is strictly O(1) regardless of sequence length."""
         disp = get_dispatcher()
         B, H, dk, dv = 1, 4, 32, 32
         lengths = [64, 128, 256, 512]
@@ -1021,5 +946,4 @@ class TestTier4RealWorldScenarios:
             state_mem_bytes = state.element_size() * state.nelement()
             state_sizes.append(state_mem_bytes)
 
-        # Memory footprint for S_t must be identical across all sequence lengths
         assert all(s == state_sizes[0] for s in state_sizes), f"State sizes varied: {state_sizes}"

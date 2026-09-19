@@ -1,5 +1,5 @@
 import math
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -36,8 +36,15 @@ class DenseAttention(nn.Module):
             v = torch.cat([pv, v], dim=2)
 
         nkv = (k, v)
-        c = (kv_cache is None) and (l > 1)
-        o = F.scaled_dot_product_attention(q, k, v, is_causal=c)
+        if l > 1:
+            if kv_cache is None:
+                o = F.scaled_dot_product_attention(q, k, v, is_causal=True)
+            else:
+                lkv = k.shape[2]
+                mask = (torch.arange(l, device=x.device).unsqueeze(1) + (lkv - l)) >= torch.arange(lkv, device=x.device).unsqueeze(0)
+                o = F.scaled_dot_product_attention(q, k, v, attn_mask=mask)
+        else:
+            o = F.scaled_dot_product_attention(q, k, v, is_causal=False)
         o = o.transpose(1, 2).contiguous().view(b, l, self.n_heads * self.d_head)
         return self.o_proj(o), nkv
 
@@ -122,7 +129,7 @@ class DenseTransformerForCausalLM(nn.Module):
         nps = []
 
         for i, layer in enumerate(self.layers):
-            kv = past_states[i] if past_states is not None else None
+            kv = past_states[i] if past_states is not None and i < len(past_states) else None
             x, nkv = layer(x, kv_cache=kv)
             nps.append(nkv)
 
@@ -147,22 +154,37 @@ class DenseTransformerForCausalLM(nn.Module):
         temperature: float = 1.0,
         top_k: Optional[int] = 50,
     ) -> torch.Tensor:
+        was_training = self.training
         self.eval()
-        gen = input_ids.clone()
-        for _ in range(max_new_tokens):
-            out = self(gen)
-            nl = out.logits[:, -1, :]
-            if temperature > 0:
-                nl = nl / temperature
-                if top_k is not None:
-                    v, _ = torch.topk(nl, min(top_k, nl.size(-1)))
-                    nl[nl < v[:, [-1]]] = float("-inf")
-                p = F.softmax(nl, dim=-1)
-                tok = torch.multinomial(p, num_samples=1)
-            else:
-                tok = torch.argmax(nl, dim=-1, keepdim=True)
-            gen = torch.cat([gen, tok], dim=1)
-        return gen
+        try:
+            out = self(input_ids)
+            past_states = out.past_states
+            next_logits = out.logits[:, -1:, :]
+            tokens = [input_ids]
+
+            for i in range(max_new_tokens):
+                nl = next_logits.squeeze(1)
+                if temperature > 0:
+                    nl = nl / temperature
+                    if top_k is not None:
+                        k_val = min(top_k, nl.size(-1))
+                        v, _ = torch.topk(nl, k_val)
+                        nl = nl.masked_fill(nl < v[:, [-1]], float("-inf"))
+                    p = F.softmax(nl, dim=-1)
+                    tok = torch.multinomial(p, num_samples=1)
+                else:
+                    tok = torch.argmax(nl, dim=-1, keepdim=True)
+                tokens.append(tok)
+
+                if i < max_new_tokens - 1:
+                    out = self(tok, past_states=past_states)
+                    past_states = out.past_states
+                    next_logits = out.logits[:, -1:, :]
+
+            return torch.cat(tokens, dim=1)
+        finally:
+            self.train(was_training)
 
 
 DenseTransformerLM = DenseTransformerForCausalLM
+DenseLM = DenseTransformerForCausalLM

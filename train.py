@@ -1,17 +1,60 @@
 import argparse
+import json
 import os
-import sys
 import time
 from typing import Optional
 import torch
 import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, DistributedSampler
 
 from maba_sparse.baselines.dense_transformer import DenseTransformerForCausalLM
 from maba_sparse.config import MabaSparseConfig
-from maba_sparse.model import MabaSparseForCausalLM, get_101m_config
+from maba_sparse.model import MabaSparseForCausalLM
+
+
+class DialogDataset(Dataset):
+    def __init__(
+        self,
+        data_path: Optional[str] = None,
+        seq_len: int = 128,
+        vocab_size: int = 32768,
+        num_samples: int = 20,
+    ) -> None:
+        self.seq_len = seq_len
+        self.vocab_size = vocab_size
+        self.samples = []
+        if data_path and os.path.exists(data_path):
+            with open(data_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for item in data:
+                text = ""
+                for turn in item.get("dialog", []):
+                    text += f"<{turn['role']}>: {turn['content']}\n"
+                self.samples.append(text)
+        if not self.samples:
+            self.samples = [
+                "<user>: What is Maba?\n<assistant>: Maba is a hybrid sparse attention architecture.\n",
+                "<user>: How does DGDA work?\n<assistant>: It uses dynamic guided decay with recurrent states.\n",
+            ]
+        self.num_samples = max(len(self.samples), num_samples)
+
+    def __len__(self) -> int:
+        return self.num_samples
+
+    def __getitem__(self, idx: int) -> dict:
+        text = self.samples[idx % len(self.samples)]
+        encoded = [b % self.vocab_size for b in text.encode("utf-8")]
+        if len(encoded) < self.seq_len:
+            pad_len = self.seq_len - len(encoded)
+            encoded = encoded + [0] * pad_len
+        else:
+            encoded = encoded[: self.seq_len]
+        tok = torch.tensor(encoded, dtype=torch.long)
+        tgt = torch.roll(tok, -1)
+        tgt[-1] = -100
+        return {"input_ids": tok, "targets": tgt}
 
 
 class SyntheticLanguageDataset(Dataset):
@@ -19,15 +62,14 @@ class SyntheticLanguageDataset(Dataset):
         self.vocab_size = vocab_size
         self.seq_len = seq_len
         self.num_samples = num_samples
-        self.rng = torch.Generator().manual_seed(42)
-
     def __len__(self) -> int:
         return self.num_samples
 
     def __getitem__(self, idx: int) -> dict:
-        tok = torch.randint(1, self.vocab_size, (self.seq_len,), generator=self.rng)
+        rng = torch.Generator().manual_seed(42 + idx)
+        tok = torch.randint(0, self.vocab_size, (self.seq_len,), generator=rng)
         tgt = torch.roll(tok, -1)
-        tgt[-1] = 0
+        tgt[-1] = -100
         return {"input_ids": tok, "targets": tgt}
 
 
@@ -87,12 +129,16 @@ def build_model(
 
 
 def train(args: argparse.Namespace) -> None:
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+
     r, ws, lr, dist_flag = setup_distributed()
     main = r == 0
     dev = torch.device(f"cuda:{lr}") if torch.cuda.is_available() else torch.device("cpu")
 
     if main:
-        print(f"=== Starting Training ===")
+        print("Starting Training")
         print(f"Model: {args.model}")
         print(f"Device: {dev} | Distributed: {dist_flag} (World Size: {ws})")
         print(f"Steps: {args.steps} | Batch Size: {args.batch_size} | Seq Len: {args.seq_len}")
@@ -115,14 +161,40 @@ def train(args: argparse.Namespace) -> None:
         m = DDP(m, device_ids=[lr] if torch.cuda.is_available() else None)
         m._set_static_graph()
 
-    opt = torch.optim.AdamW(m.parameters(), lr=args.lr, weight_decay=0.01)
-    scaler = torch.amp.GradScaler("cuda", enabled=args.fp16 and torch.cuda.is_available())
-    ds = SyntheticLanguageDataset(
-        vocab_size=args.vocab_size, seq_len=args.seq_len, num_samples=args.steps * args.batch_size * 2
+    decay_params = []
+    nodecay_params = []
+    for name, param in m.named_parameters():
+        if not param.requires_grad:
+            continue
+        if param.dim() < 2 or "norm" in name or "bias" in name or "gate" in name:
+            nodecay_params.append(param)
+        else:
+            decay_params.append(param)
+    opt = torch.optim.AdamW(
+        [
+            {"params": decay_params, "weight_decay": 0.01},
+            {"params": nodecay_params, "weight_decay": 0.0},
+        ],
+        lr=args.lr,
     )
-    loader = DataLoader(ds, batch_size=args.batch_size, shuffle=False)
+    scaler = torch.amp.GradScaler("cuda", enabled=args.fp16 and torch.cuda.is_available())
+    if getattr(args, "dataset", "synthetic") == "dialog":
+        data_path = getattr(args, "data_path", None) or "assets/dialogs_sample.json"
+        ds = DialogDataset(
+            data_path=data_path,
+            seq_len=args.seq_len,
+            vocab_size=args.vocab_size,
+            num_samples=max(args.steps * args.batch_size * 2, 20),
+        )
+    else:
+        ds = SyntheticLanguageDataset(
+            vocab_size=args.vocab_size, seq_len=args.seq_len, num_samples=max(args.steps * args.batch_size * 2, 100)
+        )
+    sampler = DistributedSampler(ds, num_replicas=ws, rank=r, shuffle=False) if dist_flag else None
+    loader = DataLoader(ds, batch_size=args.batch_size, sampler=sampler, shuffle=(sampler is None))
     it = iter(loader)
 
+    loss = None
     m.train()
     t0 = time.time()
     toks = 0
@@ -168,10 +240,11 @@ def train(args: argparse.Namespace) -> None:
     atp = toks / max(el, 1e-6)
 
     if main:
-        print("=== Training Complete ===")
+        print("Training Complete")
         print(f"Total Steps: {args.steps} | Total Time: {el:.2f}s")
         print(f"Average Throughput: {atp:.1f} tokens/sec")
-        print(f"Final Step Loss: {loss.item():.4f}")
+        final_loss = f"{loss.item():.4f}" if loss is not None else "N/A"
+        print(f"Final Step Loss: {final_loss}")
 
     cleanup_distributed(dist_flag)
 
@@ -189,6 +262,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--d_emb", type=int, default=128)
     parser.add_argument("--intermediate_size", type=int, default=1248)
     parser.add_argument("--log_interval", type=int, default=10)
+    parser.add_argument("--dataset", type=str, default="synthetic", choices=["synthetic", "dialog"])
+    parser.add_argument("--data_path", type=str, default=None)
     parser.add_argument("--fp16", action="store_true", help="Enable FP16 mixed precision training")
     return parser.parse_args()
 

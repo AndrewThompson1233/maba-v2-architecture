@@ -1,14 +1,3 @@
-"""Automated unit and integration test suite for Decoupled Gated Delta Attention (DGDA).
-
-Validates Milestone 1 acceptance criteria:
-1. Chunkwise vs Sequential Recurrent State & Output Equivalence (< 1e-4 tolerance).
-2. Autoregressive step() decode vs full forward() equivalence.
-3. Analytical gradient continuity (finite, non-zero, zero-NaN gradients on all parameters).
-4. Strict causal masking isolation (past output unchanged; future gradients identically 0.0).
-5. Numerical stability across float32, bfloat16, and float16 (no autograd trap).
-6. O(1) state memory footprint invariance across sequence lengths.
-7. Robust boundary conditions (arbitrary lengths L, zero norm keys, uninitialized states).
-"""
 
 import math
 from typing import Optional, Tuple, Union
@@ -20,10 +9,6 @@ import torch.nn.functional as F
 from maba_sparse.config import MabaSparseConfig
 from maba_sparse.layers.dgda import ConvState, DGDALayer
 
-# ==============================================================================
-# Mathematical Sequential Reference Implementation (Gold Standard)
-# ==============================================================================
-
 
 def sequential_dgda_reference(
     x: torch.Tensor,
@@ -31,11 +16,6 @@ def sequential_dgda_reference(
     state: Optional[torch.Tensor] = None,
     conv_state: Optional[Union[ConvState, Tuple[torch.Tensor, ...]]] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, ConvState]:
-    """Pure sequential token-by-token recurrence reference implementation of DGDA.
-
-    Executes a standard Python loop without chunking or Neumann series approximations.
-    Used as the mathematical ground-truth for parity verification.
-    """
     B, L, D = x.shape
     H, d_k, d_v = layer.n_heads, layer.d_head, layer.d_head
     k_size = layer.kernel_size
@@ -77,16 +57,11 @@ def sequential_dgda_reference(
 
     outs = []
     for t in range(L):
-        # Scale rows of S by alpha_t
-        S_decay = alpha[:, t, :, :, None] * S  # [B, H, d_k, d_v]
-        # Erase projection: (b_t * k_t) @ S_decay
-        pred = torch.matmul(beta[:, t].unsqueeze(-2), S_decay)  # [B, H, 1, d_v]
-        # Delta innovation: u_t - pred
-        delta = u[:, t].unsqueeze(-2) - pred  # [B, H, 1, d_v]
-        # Rank-1 state update
-        S = S_decay + torch.matmul(k[:, t].unsqueeze(-1), delta)  # [B, H, d_k, d_v]
-        # Readout: q_t @ S_t
-        ot = torch.matmul(q[:, t].unsqueeze(-2), S).squeeze(-2)  # [B, H, d_v]
+        S_decay = alpha[:, t, :, :, None] * S
+        pred = torch.matmul(beta[:, t].unsqueeze(-2), S_decay)
+        delta = u[:, t].unsqueeze(-2) - pred
+        S = S_decay + torch.matmul(k[:, t].unsqueeze(-1), delta)
+        ot = torch.matmul(q[:, t].unsqueeze(-2), S).squeeze(-2)
         outs.append(ot)
 
     if outs:
@@ -98,13 +73,7 @@ def sequential_dgda_reference(
     return out_proj, S, ref_conv_state
 
 
-# ==============================================================================
-# Test 1: Layer Initialization & Weight Parameter Integrity
-# ==============================================================================
-
-
 def test_dgda_initialization(config):
-    """Verify weight matrices, causal convolutions, aliases, and parameter dimensions."""
     assert isinstance(config, MabaSparseConfig)
     layer = DGDALayer(config)
 
@@ -116,7 +85,6 @@ def test_dgda_initialization(config):
     assert layer.kernel_size == 4
     assert layer.k_size == 4
 
-    # Verify projection shapes
     assert layer.q_proj.weight.shape == (640, 640)
     assert layer.k_proj.weight.shape == (640, 640)
     assert layer.v_proj.weight.shape == (640, 640)
@@ -125,28 +93,19 @@ def test_dgda_initialization(config):
     assert layer.gate_alpha.weight.shape == (640, 640)
     assert layer.o_proj.weight.shape == (640, 640)
 
-    # Verify compatibility aliases
     assert layer.b_proj is layer.gate_erase
     assert layer.w_proj is layer.gate_write
     assert layer.alpha_proj is layer.gate_alpha
 
-    # Verify depthwise causal conv shapes (groups=dim)
     assert layer.conv_q.weight.shape == (640, 1, 4)
     assert layer.conv_k.weight.shape == (640, 1, 4)
     assert layer.conv_v.weight.shape == (640, 1, 4)
 
 
-# ==============================================================================
-# Test 2: Chunkwise vs Sequential Recurrent State & Output Equivalence (< 1e-4)
-# ==============================================================================
-
-
 class TestChunkwiseVsSequentialEquivalence:
-    """Validates that chunkwise parallel prefill matches exact sequential recurrence within < 1e-4."""
 
     @pytest.mark.parametrize("seq_len", [16, 32, 48, 64])
     def test_chunkwise_vs_sequential_multi_length(self, dgda_layer, seq_len):
-        """Verify max difference < 1e-4 across multiple sequence lengths (L=16, 32, 48, 64)."""
         torch.manual_seed(100 + seq_len)
         B, D = 2, dgda_layer.dim
         x = torch.randn(B, seq_len, D)
@@ -162,7 +121,6 @@ class TestChunkwiseVsSequentialEquivalence:
 
     @pytest.mark.parametrize("chunk_size", [16, 32, 64])
     def test_chunkwise_vs_sequential_various_chunk_sizes(self, dgda_layer, chunk_size):
-        """Verify that configuring chunk sizes C=16, 32, 64 maintains parity < 1e-4 on L=64."""
         torch.manual_seed(200 + chunk_size)
         B, L, D = 2, 64, dgda_layer.dim
         x = torch.randn(B, L, D)
@@ -179,7 +137,6 @@ class TestChunkwiseVsSequentialEquivalence:
         assert diff_out < 1e-4, f"Output diff {diff_out:.6e} >= 1e-4 at C={chunk_size}"
 
     def test_chunkwise_with_non_zero_initial_state(self, dgda_layer):
-        """Verify chunkwise prefill correctly integrates non-zero initial recurrent state S0."""
         torch.manual_seed(300)
         B, L, D = 2, 32, dgda_layer.dim
         H, d_k, d_v = dgda_layer.n_heads, dgda_layer.d_head, dgda_layer.d_head
@@ -199,16 +156,9 @@ class TestChunkwiseVsSequentialEquivalence:
         assert diff_out < 1e-4, f"Output diff with S0 {diff_out:.6e} >= 1e-4"
 
 
-# ==============================================================================
-# Test 3: Autoregressive Single-Token step() Decode vs forward() Equivalence
-# ==============================================================================
-
-
 class TestStepVsForwardEquivalence:
-    """Validates that token-by-token decode via step() matches forward() execution."""
 
     def test_step_loop_vs_sequential_forward_exact(self, dgda_layer):
-        """Verify that looping through step() matches sequential reference within < 1e-6."""
         torch.manual_seed(400)
         B, L, D = 2, 16, dgda_layer.dim
         x = torch.randn(B, L, D)
@@ -239,7 +189,6 @@ class TestStepVsForwardEquivalence:
         ), f"step() vs forward() state diff {diff_state:.6e} >= 1e-6"
 
     def test_step_loop_vs_chunkwise_forward(self, dgda_layer):
-        """Verify that looping through step() matches chunkwise prefill within < 1e-4."""
         torch.manual_seed(401)
         B, L, D = 2, 48, dgda_layer.dim
         x = torch.randn(B, L, D)
@@ -270,7 +219,6 @@ class TestStepVsForwardEquivalence:
         ), f"step() vs chunkwise state diff {diff_state:.6e} >= 1e-4"
 
     def test_conv_state_caching_invariance(self, dgda_layer):
-        """Verify conv_state preserves causal left-padding across successive calls."""
         torch.manual_seed(402)
         B, D = 2, dgda_layer.dim
         k = dgda_layer.kernel_size
@@ -278,7 +226,6 @@ class TestStepVsForwardEquivalence:
         x1 = torch.randn(B, 1, D)
         x2 = torch.randn(B, 1, D)
 
-        # Step 1
         _, _, conv_state1 = dgda_layer.step(x1)
         assert conv_state1 is not None
         assert conv_state1.shape == (B, 3, D, k - 1)
@@ -286,7 +233,6 @@ class TestStepVsForwardEquivalence:
         for cs in conv_state1:
             assert cs.shape == (B, D, k - 1)
 
-        # Step 2
         _, _, conv_state2 = dgda_layer.step(x2, conv_state=conv_state1)
         assert conv_state2.shape == (B, 3, D, k - 1)
 
@@ -294,17 +240,10 @@ class TestStepVsForwardEquivalence:
             assert cs.shape == (B, D, k - 1)
 
 
-# ==============================================================================
-# Test 4: Analytical Gradient Continuity (Finite, Non-Zero, Zero-NaNs)
-# ==============================================================================
-
-
 class TestAnalyticalGradientContinuity:
-    """Validates that backward computes non-zero, finite, NaN-free gradients across all parameters."""
 
     @pytest.mark.parametrize("chunk_size", [16, 32])
     def test_backward_all_parameters_finite_and_nonzero(self, small_config, chunk_size):
-        """Verify that dLoss/dParam is non-zero, finite, and free of NaNs for all weights."""
         torch.manual_seed(500)
         layer = DGDALayer(small_config)
         layer.train()
@@ -334,7 +273,6 @@ class TestAnalyticalGradientContinuity:
             ), f"Param {name} grad norm is not finite: {grad_norm}"
 
     def test_backward_step_decode_graph(self, small_config):
-        """Verify that gradients flow cleanly through autoregressive step() unrolling."""
         torch.manual_seed(501)
         layer = DGDALayer(small_config)
         layer.train()
@@ -360,17 +298,10 @@ class TestAnalyticalGradientContinuity:
                 assert param.grad.norm().item() > 0.0, f"Step param {name} grad is zero"
 
 
-# ==============================================================================
-# Test 5: Causal Masking Isolation
-# ==============================================================================
-
-
 class TestCausalMaskingIsolation:
-    """Validates that no future information leaks backwards into past representations."""
 
     @pytest.mark.parametrize("t_perturb", [0, 5, 10, 15, 20])
     def test_causal_output_perturbation_isolation(self, dgda_layer, t_perturb):
-        """Perturbing token t must result in exactly 0.0 change on tokens < t."""
         torch.manual_seed(600 + t_perturb)
         B, L, D = 1, 32, dgda_layer.dim
 
@@ -399,7 +330,6 @@ class TestCausalMaskingIsolation:
 
     @pytest.mark.parametrize("target_t", [0, 7, 15, 23])
     def test_causal_gradient_jacobian_isolation(self, small_config, target_t):
-        """Computing loss on token target_t must produce exactly 0.0 gradient on future input tokens (> target_t)."""
         torch.manual_seed(700 + target_t)
         layer = DGDALayer(small_config)
         layer.train()
@@ -423,17 +353,10 @@ class TestCausalMaskingIsolation:
         assert target_grad > 0.0, "Gradient at target token is zero"
 
 
-# ==============================================================================
-# Test 6: Numerical Stability under Mixed Precision (FP32, BF16, FP16)
-# ==============================================================================
-
-
 class TestNumericalStabilityMixedPrecision:
-    """Validates execution across float32, bfloat16, and float16 without NaNs or Infs."""
 
     @pytest.mark.parametrize("dtype", [torch.float32, torch.bfloat16, torch.float16])
     def test_precision_forward_backward_clean(self, small_config, dtype):
-        """Verify forward and backward execution under FP32, BF16, and FP16 produces zero NaNs and zero Infs."""
         torch.manual_seed(800)
         layer = DGDALayer(small_config).to(dtype)
         layer.train()
@@ -464,7 +387,6 @@ class TestNumericalStabilityMixedPrecision:
                 ).any(), f"Param {name} grad has Infs in {dtype}"
 
     def test_extreme_decay_gate_logits_stability(self, small_config):
-        """Verify extreme decay logits (+/- 50.0) do not cause overflow or underflow NaNs."""
         torch.manual_seed(801)
         layer = DGDALayer(small_config)
         layer.eval()
@@ -481,17 +403,10 @@ class TestNumericalStabilityMixedPrecision:
         assert not torch.isnan(state).any(), "Extreme decay logits caused NaNs in state"
 
 
-# ==============================================================================
-# Test 7: O(1) Memory Invariance
-# ==============================================================================
-
-
 class TestMemoryInvariance:
-    """Validates that recurrent state tensor shape and memory footprint are strictly invariant to L."""
 
     @pytest.mark.parametrize("seq_len", [1, 16, 64, 256, 1024])
     def test_recurrent_state_shape_and_memory_invariance(self, dgda_layer, seq_len):
-        """Verify state shape is strictly (B, H, d_k, d_v) and bytes allocated do not change with seq_len."""
         torch.manual_seed(900)
         B, D = 2, dgda_layer.dim
         H, d_k, d_v = dgda_layer.n_heads, dgda_layer.d_head, dgda_layer.d_head
@@ -499,7 +414,6 @@ class TestMemoryInvariance:
         x = torch.randn(B, seq_len, D)
         _, state, conv_state = dgda_layer(x, chunk_size=16)
 
-        # 1. State shape check
         assert state.shape == (
             B,
             H,
@@ -507,7 +421,6 @@ class TestMemoryInvariance:
             d_v,
         ), f"Recurrent state shape {state.shape} violates O(1) invariant (B, H, d_k, d_v)"
 
-        # 2. Element count and memory check
         expected_elements = B * H * d_k * d_v
         expected_bytes = expected_elements * state.element_size()
         assert (
@@ -517,13 +430,11 @@ class TestMemoryInvariance:
             state.nelement() * state.element_size()
         ) == expected_bytes, "State memory grew"
 
-        # 3. Conv state shape check
         assert conv_state.shape == (B, 3, D, dgda_layer.kernel_size - 1)
         for cs in conv_state:
             assert cs.shape == (B, D, dgda_layer.kernel_size - 1)
 
     def test_autoregressive_step_memory_leak_free(self, dgda_layer):
-        """Verify running 20 consecutive step() calls maintains identical state object dimensions."""
         torch.manual_seed(901)
         B, D = 2, dgda_layer.dim
         state = None
@@ -542,19 +453,12 @@ class TestMemoryInvariance:
         ), "State shape mutated across steps"
 
 
-# ==============================================================================
-# Test 8: Boundary Conditions & Non-Divisible Sequence Length Handling
-# ==============================================================================
-
-
 class TestBoundaryConditions:
-    """Validates boundary conditions: arbitrary lengths L, zero norm keys, uninitialized states."""
 
     @pytest.mark.parametrize(
         "seq_len", [0, 1, 5, 7, 15, 16, 17, 25, 31, 32, 37, 48, 65, 70, 128]
     )
     def test_arbitrary_sequence_lengths(self, dgda_layer, seq_len):
-        """Verify arbitrary sequence lengths execute cleanly without shape mismatches or index errors."""
         torch.manual_seed(1000 + seq_len)
         B, D = 2, dgda_layer.dim
         x = torch.randn(B, seq_len, D)
@@ -576,7 +480,6 @@ class TestBoundaryConditions:
         assert conv_state.shape == (B, 3, D, dgda_layer.kernel_size - 1)
 
     def test_zero_key_norm_stability(self, dgda_layer):
-        """Verify all-zero input projection resulting in ||k_t|| = 0 is stabilized by epsilon without NaNs."""
         B, L, D = 2, 16, dgda_layer.dim
         x_zero = torch.zeros(B, L, D)
 
@@ -586,7 +489,6 @@ class TestBoundaryConditions:
         assert not torch.isinf(out).any(), "Zero key norm resulted in Infs"
 
     def test_uninitialized_state_defaults(self, dgda_layer):
-        """Verify passing state=None and conv_state=None initializes cleanly to zeros."""
         B, L, D = 2, 16, dgda_layer.dim
         x = torch.randn(B, L, D)
 
