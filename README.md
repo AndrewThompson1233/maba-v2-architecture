@@ -6,6 +6,7 @@
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MOAL--1.0-blue.svg" alt="License"/></a>
     <a href="config.json"><img src="https://img.shields.io/badge/Parameters-101.3M-emerald.svg" alt="Parameters"/></a>
+    <a href="SCALING.md"><img src="https://img.shields.io/badge/Scaling-100M_to_30B-indigo.svg" alt="Scaling"/></a>
     <a href="BENCHMARK_REPORT.md"><img src="https://img.shields.io/badge/Context-1%2C000%2C000+-cyan.svg" alt="Context"/></a>
     <img src="https://img.shields.io/badge/Decode-O(1)%20Flat-purple.svg" alt="Decode O(1)"/>
     <img src="https://img.shields.io/badge/Tests-649%20Passed-green.svg" alt="Tests"/>
@@ -58,6 +59,8 @@ Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ li
 | **131,072** | 6,400.00 | 3,200.00 | 640.00 | **163.59** | **39.1x vs Dense** (19.6x vs MiniCPM-5) |
 | **262,144** | 12,800.00 | 6,400.00 | 1,280.00 | **324.84** | **39.4x vs Dense** (19.7x vs MiniCPM-5) |
 | **1,000,000** | 48,828.12 | 24,414.06 | 4,882.81 | **1,232.58** | **39.6x vs Dense** (19.8x vs MiniCPM-5) |
+
+Detailed analytical equations, parameter budgets across scales (100M to 30B), and empirical latency invariance are documented in [SCALING.md](SCALING.md).
 
 ---
 
