@@ -16,10 +16,24 @@ keywords = [
     "deep-learning",
     "pytorch",
     "transformer",
+    "causal-lm",
+    "llm",
     "sparse-attention",
     "linear-attention",
+    "linear-recurrence",
     "recurrent-memory",
-    "long-context"
+    "dgda",
+    "maba-sa",
+    "mla",
+    "multi-head-latent-attention",
+    "long-context",
+    "1m-context",
+    "sub-quadratic",
+    "state-space-model",
+    "ssm",
+    "triton",
+    "on-device-ai",
+    "efficient-llm"
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
