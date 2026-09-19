@@ -57,12 +57,12 @@ tags:
 
 **Maba v2 Architecture** (`maba-v2-architecture`) is a reference PyTorch implementation of a 3:1 hybrid architecture uniting linear recurrence (**DGDA**) and sparse global attention (**MABA-SA**).
 
-Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ linear decode slowdown. Pure linear recurrent models struggle with associative recall across distant context. Maba solves this dilemma by routing 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with anti-dilution centroid routing.
+Traditional dense transformers suffer from O(L²) prefill memory and O(L) linear decode slowdown. Pure linear recurrent models struggle with associative recall across distant context. Maba solves this dilemma by routing 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with anti-dilution centroid routing.
 
-- **Strict $O(1)$ Decode Latency**: 35–37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
+- **Strict O(1) Decode Latency**: 35–37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
 - **39.6x KV-Cache Compression**: 1.20 GB for 1M tokens in FP16 (vs 48.8 GB for dense attention).
 - **1,000,000 Token Fact Extraction**: Single-needle retrieval at Token #742,189 with Rank #1 out of 15,625 blocks and 100% fine-grained attention focus.
-- **NoPE Temporal Invariance**: Replaces RoPE with exponential recurrent decay ($\alpha_t$) to prevent frequency phase distortion over long distances.
+- **NoPE Temporal Invariance**: Replaces RoPE with exponential recurrent decay (α_t) to prevent frequency phase distortion over long distances.
 
 ---
 
@@ -74,10 +74,10 @@ Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ li
 
 | Architecture | Macro-Topology | Attention Paradigm | Decode Complexity | KV Cache @ 131k | KV Cache @ 1M | Max Context |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
-| **Maba (Canonical)** | **3:1 Hybrid (15 DGDA : 5 MABA-SA)** | **Latent MLA ($d_c=128$) + 64:1 Centroids** | **O(1) Flat (35 ms)** | **163.6 MB** | **1.20 GB** | **1,000,000+ (NoPE)** |
-| **Qwen3.8-Flash-Next** | Hybrid GDN + QSA MoE (6B active) | Micro-Block Sparse Attention | Sublinear $O(\log L)$ | 640.0 MB | 4.80 GB | 262k / 1M (YaRN) |
-| **MiniCPM-5** | Dense CausalLM (1B / 2B) | 100% Dense GQA | Linear $O(L)$ | 3.20 GB | 24.50 GB | 131,072 (RoPE) |
-| **Dense Transformer** | Standard Transformer | 100% Dense Softmax MHA | Linear $O(L)$ | 6.40 GB | 48.82 GB | 64,000 max (OOM) |
+| **Maba (Canonical)** | **3:1 Hybrid (15 DGDA : 5 MABA-SA)** | **Latent MLA (d_c=128) + 64:1 Centroids** | **O(1) Flat (35 ms)** | **163.6 MB** | **1.20 GB** | **1,000,000+ (NoPE)** |
+| **Qwen3.8-Flash-Next** | Hybrid GDN + QSA MoE (6B active) | Micro-Block Sparse Attention | Sublinear O(log L) | 640.0 MB | 4.80 GB | 262k / 1M (YaRN) |
+| **MiniCPM-5** | Dense CausalLM (1B / 2B) | 100% Dense GQA | Linear O(L) | 3.20 GB | 24.50 GB | 131,072 (RoPE) |
+| **Dense Transformer** | Standard Transformer | 100% Dense Softmax MHA | Linear O(L) | 6.40 GB | 48.82 GB | 64,000 max (OOM) |
 
 ---
 
@@ -92,9 +92,9 @@ All parameter scaling laws, model tiers (100M to 30B), analytical KV-cache memor
 - **Reference Config**: [config.json](config.json) (101,282,319 parameters).
 - **Macro-Stack (20 layers, 3:1 ratio)**:
   - 15 layers: [DGDA (Decoupled Gated Delta Attention)](maba_sparse/layers/dgda.py) linear recurrence.
-  - 5 layers: [MABA-SA (Sparse Attention)](maba_sparse/layers/sparse_attention.py) with MLA latent compression ($d_c=128$).
+  - 5 layers: [MABA-SA (Sparse Attention)](maba_sparse/layers/sparse_attention.py) with MLA latent compression (d_c = 128).
 - **Factorized Embeddings**: Vocab 32,768 -> 128 -> 640 in [maba_sparse/model.py](maba_sparse/model.py).
-- **Anti-Dilution Routing**: [DG-Indexer](maba_sparse/layers/indexer.py) uses hybrid pooling $\frac{1}{2}(\text{mean} + \text{max})$ with distance decay penalty $\lambda \log(1+\Delta)$ to protect salient single-token facts against background noise.
+- **Anti-Dilution Routing**: [DG-Indexer](maba_sparse/layers/indexer.py) uses hybrid pooling 0.5 × (mean + max) with distance decay penalty λ · log(1 + Δ) to protect salient single-token facts against background noise.
 - **Superposition Attention**: 3 streams dynamically superposed via data-dependent gate logits:
   1. Local Sliding Window (128 tokens + 4 sinks).
   2. Sparse Top-32 Blocks (2,048 gathered tokens).
