@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/logo.svg" width="160" alt="Maba Logo"/>
-  <h1>MABA</h1>
+  <img src="assets/logo.svg" width="128" alt="Maba v2 Logo"/>
+  <h1>Maba v2 Architecture</h1>
   <p><b>Linear Recurrence &amp; Sparse Attention Hybrid Architecture</b></p>
 
   <p>
@@ -16,7 +16,7 @@
 
 ## Overview
 
-**Maba** is a reference PyTorch implementation of a 3:1 hybrid architecture uniting linear recurrence (**DGDA**) and sparse global attention (**MABA-SA**).
+**Maba v2 Architecture** (`maba-v2-architecture`) is a reference PyTorch implementation of a 3:1 hybrid architecture uniting linear recurrence (**DGDA**) and sparse global attention (**MABA-SA**).
 
 Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ linear decode slowdown. Pure linear recurrent models struggle with associative recall across distant context. Maba solves this dilemma by routing 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with anti-dilution centroid routing.
 
@@ -82,8 +82,8 @@ Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ li
 ### Installation
 
 ```bash
-git clone https://github.com/ivan-dev35/123123.git
-cd 123123/codex/maba-v1.5-exp-architecture
+git clone https://github.com/AndrewThompson1233/maba-v2-architecture.git
+cd maba-v2-architecture
 pip install -e .
 ```
 
@@ -162,12 +162,12 @@ All 23 test modules in [tests/](tests/) verify causal masking, autograd graph in
 
 ## License & Attribution
 
-Maba is released under the **MABA Open Architecture License (MOAL-1.0)**.
+Maba v2 Architecture is released under the **MABA Open Architecture License (MOAL-1.0)**.
 
 - **Author**: Andrew Thompson (`AndrewThompson1233`)
 - **Commercial & Research Use**: Permitted without royalty fees.
 - **Attribution**: Any derivative architecture, implementation, checkpoint, or paper must state:
-  > `Created based on Maba Architecture by Andrew Thompson`
-- **Anti-Plagiarism Protection**: The name **Maba** and its foundational mechanisms (**DGDA**, **MABA-SA**, **DG-Indexer**, **HCA**) may not be renamed, rebranded, or claimed under different names when adapting or copying this architecture.
+  > `Created based on Maba v2 Architecture by Andrew Thompson`
+- **Anti-Plagiarism Protection**: The name **Maba** / **Maba v2** and its foundational mechanisms (**DGDA**, **MABA-SA**, **DG-Indexer**, **HCA**) may not be renamed, rebranded, or claimed under different names when adapting or copying this architecture.
 
 See [LICENSE](LICENSE) for the full license text.

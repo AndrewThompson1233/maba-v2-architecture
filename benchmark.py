@@ -334,7 +334,7 @@ def run_benchmark(
 
     # Generate comprehensive Markdown Report
     md_lines = [
-        "# Maba v1.5 vs Dense Transformer Official Benchmark Report",
+        "# Maba v2 Architecture Official Benchmark Report",
         "",
         f"- **Hardware Platform**: `{results['metadata']['device_name']}` (`{dev}`)",
         f"- **PyTorch / CUDA**: `PyTorch {results['metadata']['torch_version']}` / `CUDA {results['metadata']['cuda_version']}`",
