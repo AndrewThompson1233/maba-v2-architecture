@@ -68,22 +68,27 @@ def benchmark_prefill(
 def benchmark_decode_step(
     model: nn.Module,
     device: torch.device,
-    is_maba: bool,
+    context_length: int = 16,
     warmup: int = 2,
     repeats: int = 5,
 ) -> float:
     model.eval()
-    stok = torch.randint(0, 1000, (1, 1), device=device)
-    seq = torch.randint(0, 1000, (1, 16), device=device)
+    stok = torch.randint(1, 32000, (1, 1), device=device)
+    seq = torch.randint(1, 32000, (1, context_length), device=device)
 
     with torch.no_grad():
         out = model(seq)
         pst = out.past_states
 
+    is_step_capable = hasattr(model, "step") and callable(getattr(model, "step"))
+
     with torch.no_grad():
         for _ in range(warmup):
-            sout = model(stok, past_states=pst)
-            pst = sout.past_states
+            if is_step_capable:
+                _, pst = model.step(stok, past_states=pst)
+            else:
+                sout = model(stok, past_states=pst)
+                pst = sout.past_states
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
 
@@ -93,11 +98,14 @@ def benchmark_decode_step(
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             t0 = time.perf_counter()
-            sout = model(stok, past_states=pst)
+            if is_step_capable:
+                _, pst = model.step(stok, past_states=pst)
+            else:
+                sout = model(stok, past_states=pst)
+                pst = sout.past_states
             if device.type == "cuda":
                 torch.cuda.synchronize(device)
             t1 = time.perf_counter()
-            pst = sout.past_states
             ts.append(t1 - t0)
 
     return (sum(ts) / len(ts)) * 1000.0
@@ -106,28 +114,33 @@ def benchmark_decode_step(
 def run_benchmark(
     context_lengths: List[int],
     batch_size: int = 1,
-    device_str: Optional[str] = None,
-    warmup: int = 1,
-    repeats: int = 2,
+    warmup: int = 2,
+    repeats: int = 5,
     output_json: Optional[str] = "benchmark_results.json",
     output_md: Optional[str] = "BENCHMARK_REPORT.md",
+    save_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu") if device_str is None else torch.device(device_str)
+    dev = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f"Running Benchmark on Device: {dev}")
 
-    print(f"=== Running Maba-Sparse vs Dense Transformer Benchmark ===")
-    print(f"Device: {dev} | Batch Size: {batch_size}")
-    print(f"Context Lengths: {context_lengths}")
+    m_cfg = MabaSparseConfig()
+    m_model = MabaSparseLM(m_cfg).to(dev)
 
-    print("\nInstantiating 101M Maba-Sparse model...")
-    cfg = get_101m_config()
-    m_model = MabaSparseForCausalLM(cfg).to(dev)
-    m_params = sum(p.numel() for p in set(m_model.parameters()))
-    print(f"Maba-Sparse Parameter Count: {m_params:,} ({m_params/1e6:.2f}M)")
+    d_model = DenseTransformerForCausalLM(
+        vocab_size=m_cfg.vocab_size,
+        d_emb=m_cfg.d_emb,
+        dim=m_cfg.dim,
+        n_layers=m_cfg.n_layers,
+        n_heads=m_cfg.n_heads,
+        d_head=m_cfg.d_head,
+        intermediate_size=m_cfg.intermediate_size,
+    ).to(dev)
 
-    print("\nInstantiating 101M Dense Transformer baseline...")
-    d_model = DenseTransformerForCausalLM().to(dev)
-    d_params = sum(p.numel() for p in set(d_model.parameters()))
-    print(f"Dense Transformer Parameter Count: {d_params:,} ({d_params/1e6:.2f}M)")
+    m_params = sum(p.numel() for p in m_model.parameters())
+    d_params = sum(p.numel() for p in d_model.parameters())
+
+    print(f"Maba-Sparse Parameters: {m_params:,}")
+    print(f"Dense Transformer Parameters: {d_params:,}")
 
     results: Dict[str, Any] = {
         "metadata": {
@@ -147,7 +160,7 @@ def run_benchmark(
         print("Benchmarking Maba-Sparse prefill...")
         try:
             mp = benchmark_prefill(m_model, ids, dev, warmup=warmup, repeats=repeats)
-            md = benchmark_decode_step(m_model, dev, is_maba=True, warmup=1, repeats=3)
+            md = benchmark_decode_step(m_model, dev, context_length=l, warmup=1, repeats=3)
         except Exception as e:
             print(f"Maba-Sparse failed at L={l}: {e}")
             mp = {"latency_ms": -1.0, "throughput_tokens_per_sec": -1.0, "peak_memory_mb": -1.0}
@@ -156,13 +169,13 @@ def run_benchmark(
         print("Benchmarking Dense Transformer baseline prefill...")
         try:
             dp = benchmark_prefill(d_model, ids, dev, warmup=warmup, repeats=repeats)
-            dd = benchmark_decode_step(d_model, dev, is_maba=False, warmup=1, repeats=3)
+            dd = benchmark_decode_step(d_model, dev, context_length=l, warmup=1, repeats=3)
         except Exception as e:
             print(f"Dense Transformer failed at L={l}: {e}")
             dp = {"latency_ms": -1.0, "throughput_tokens_per_sec": -1.0, "peak_memory_mb": -1.0}
             dd = -1.0
 
-        sp = dp["latency_ms"] / mp["latency_ms"] if dp["latency_ms"] > 0 and mp["latency_ms"] > 0 else 1.0
+        sp = dp["latency_ms"] / mp["latency_ms"] if dp["latency_ms"] > 0 and mp["latency_ms"] > 0 else 0.0
 
         entry = {
             "context_length": l,

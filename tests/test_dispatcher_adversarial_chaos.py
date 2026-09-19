@@ -1,35 +1,6 @@
-"""Adversarial Chaos & Stress Verification Suite for Maba-Sparse Dispatcher & Fallback.
 
-Adversarial testing suite executed by teamwork_preview_challenger.
-Stress-tests maba_sparse/kernels/dispatcher.py across 4 core chaos dimensions:
-1. Arbitrary exception injection (ZeroDivisionError, MemoryError, custom CUDARuntimeError,
-   FloatingPointError, KernelCorruptedException) across all 5 kernel dispatch operations:
-   - dispatch_dgda_prefill
-   - dispatch_dgda_step
-   - dispatch_compute_centroids
-   - dispatch_index_topk
-   - dispatch_stream_superposition
-   Verifies catch & warning emission, identical fallback results, and MABA_STRICT_BACKEND behavior.
-2. Dynamic backend switching:
-   - Rapid toggle of MABA_BACKEND between reference, cpu, auto, and aliases during active tensor ops.
-   - Rejection and error enforcement for invalid backend values.
-   - Concurrent/multi-threaded stress of get_backend() during runtime switches.
-3. Extreme shapes, edge cases, and dtypes:
-   - Odd sequence lengths: L = 1, 3, 17, 33, 65, 129, and L = 0, 7, 31, 127, 255, 513.
-   - Large batch sizes: B = 16, 32, 64 with multiple heads and asymmetric dk != dv.
-   - Uninitialized states (S=None vs zero vs existing S with requires_grad).
-   - Float32, Float16, BFloat16 precision, and strict rejection of mismatched/non-floating dtypes.
-4. Autograd computation graph unbrokenness:
-   - Verifies fallback does not sever autograd graph; backward gradients flow cleanly to all inputs.
-   - Bitwise parity of backward gradients under fallback vs pure reference.
-   - Resilience against partial forward execution before kernel crash.
-   - Double backward / higher-order gradient checks under fallback.
-"""
-
-from concurrent.futures import ThreadPoolExecutor
 import os
 import threading
-from typing import Optional, Tuple
 import warnings
 
 import pytest
@@ -44,7 +15,6 @@ from maba_sparse.kernels import (
     dispatch_index_topk,
     dispatch_stream_superposition,
     get_backend,
-    get_kernel,
     reference_compute_centroids,
     reference_dgda_prefill,
     reference_dgda_step,
@@ -54,38 +24,29 @@ from maba_sparse.kernels import (
 )
 
 
-# Custom exception classes for adversarial chaos testing
 class CustomCUDARuntimeError(RuntimeError):
-    """Custom simulated CUDA runtime error (e.g. 700: an illegal memory access was encountered)."""
     pass
 
 
 class KernelCorruptedException(Exception):
-    """Custom user-defined exception representing arbitrary hardware fault."""
-    pass
-
-
-class HardwareTrapException(Exception):
-    """Custom exception representing an unmapped accelerator trap."""
     pass
 
 
 @pytest.fixture(autouse=True)
-def clean_test_environment(monkeypatch):
-    """Ensure clean environment and reset any monkeypatched registry entries."""
+def isolate_chaos_environment(monkeypatch):
     monkeypatch.delenv("MABA_BACKEND", raising=False)
     monkeypatch.delenv("MABA_STRICT_BACKEND", raising=False)
     monkeypatch.delenv("MABA_VERBOSE", raising=False)
     clear_fallback_warnings()
 
-    # Save original registered kernels
-    from maba_sparse.kernels.cpu_dgda import cpu_dgda_prefill, cpu_dgda_step
-    orig_cpu_prefill = cpu_dgda_prefill
-    orig_cpu_step = cpu_dgda_step
-
-    yield monkeypatch
-
-    # Restore registry
+    from maba_sparse.kernels.cpu_dgda import cpu_dgda_prefill as orig_cpu_prefill, cpu_dgda_step as orig_cpu_step
+    register_kernel("cpu", "dgda_prefill")(orig_cpu_prefill)
+    register_kernel("cpu", "dgda_step")(orig_cpu_step)
+    register_kernel("cpu", "compute_centroids")(reference_compute_centroids)
+    register_kernel("cpu", "index_topk")(reference_index_topk)
+    register_kernel("cpu", "stream_superposition")(reference_stream_superposition)
+    clear_fallback_warnings()
+    yield
     register_kernel("cpu", "dgda_prefill")(orig_cpu_prefill)
     register_kernel("cpu", "dgda_step")(orig_cpu_step)
     register_kernel("cpu", "compute_centroids")(reference_compute_centroids)
@@ -94,13 +55,7 @@ def clean_test_environment(monkeypatch):
     clear_fallback_warnings()
 
 
-# ==============================================================================
-# Dimension 1: Arbitrary Exception Injection & Graceful Fallback
-# ==============================================================================
-
-
 class TestAdversarialExceptionInjection:
-    """Stress-test dispatcher resilience when kernels raise arbitrary exceptions."""
 
     @pytest.mark.parametrize("exc_class,exc_args", [
         (ZeroDivisionError, ("division by zero in CUDA threadblock",)),
@@ -112,7 +67,6 @@ class TestAdversarialExceptionInjection:
     def test_prefill_exception_injection_fallback_exact_parity(
         self, monkeypatch, exc_class, exc_args
     ):
-        """Verify dispatch_dgda_prefill catches arbitrary exception, warns, and returns bitwise ref."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
 
         def broken_prefill(**kwargs):
@@ -134,7 +88,6 @@ class TestAdversarialExceptionInjection:
             warnings.simplefilter("always")
             out_fb, state_fb = dispatch_dgda_prefill(q, k, v, alpha, b, w, initial_state=init_s)
 
-            # 1. Assert warning emitted
             fb_warnings = [w for w in recorded_warnings if issubclass(w.category, RuntimeWarning)]
             assert len(fb_warnings) >= 1, f"Expected RuntimeWarning for {exc_class.__name__}"
             warn_msg = str(fb_warnings[0].message)
@@ -142,7 +95,6 @@ class TestAdversarialExceptionInjection:
             assert "falling back to reference" in warn_msg.lower()
             assert exc_class.__name__ in warn_msg
 
-        # 2. Assert bitwise exact results vs reference
         out_ref, state_ref = reference_dgda_prefill(q, k, v, alpha, b, w, initial_state=init_s)
         assert torch.equal(out_fb, out_ref), "Fallback prefill output deviated from reference"
         assert torch.equal(state_fb, state_ref), "Fallback prefill state deviated from reference"
@@ -154,7 +106,6 @@ class TestAdversarialExceptionInjection:
         KernelCorruptedException,
     ])
     def test_step_exception_injection_fallback_exact_parity(self, monkeypatch, exc_class):
-        """Verify dispatch_dgda_step catches arbitrary exception and matches reference exactly."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
 
         def broken_step(**kwargs):
@@ -182,26 +133,22 @@ class TestAdversarialExceptionInjection:
 
     @pytest.mark.parametrize("exc_class", [ZeroDivisionError, MemoryError, CustomCUDARuntimeError])
     def test_indexer_and_superposition_exception_injection_fallback(self, monkeypatch, exc_class):
-        """Verify compute_centroids, index_topk, and stream_superposition catch and fall back."""
         monkeypatch.setenv("MABA_BACKEND", "triton")
 
         register_kernel("triton", "compute_centroids")(lambda **kw: (_ for _ in ()).throw(exc_class("Centroid crash")))
         register_kernel("triton", "index_topk")(lambda **kw: (_ for _ in ()).throw(exc_class("Topk crash")))
         register_kernel("triton", "stream_superposition")(lambda **kw: (_ for _ in ()).throw(exc_class("Superpos crash")))
 
-        # 1. Centroids
         k_idx = torch.randn(2, 65, 32)
         c_fb = dispatch_compute_centroids(k_idx, block_size=64)
         c_ref = reference_compute_centroids(k_idx, block_size=64)
         assert torch.equal(c_fb, c_ref)
 
-        # 2. TopK
         q_idx = torch.randn(2, 65, 32)
         idx_fb = dispatch_index_topk(q_idx, c_fb, top_k=2, block_size=64)
         idx_ref = reference_index_topk(q_idx, c_fb, top_k=2, block_size=64)
         assert torch.equal(idx_fb, idx_ref)
 
-        # 3. Superposition
         ol, os_t, oh = torch.randn(2, 2, 8, 16), torch.randn(2, 2, 8, 16), torch.randn(2, 2, 8, 16)
         logits = torch.randn(2, 8, 3)
         sup_fb = dispatch_stream_superposition(ol, os_t, oh, logits)
@@ -209,7 +156,6 @@ class TestAdversarialExceptionInjection:
         assert torch.equal(sup_fb, sup_ref)
 
     def test_strict_mode_escalates_fallback_to_runtime_error(self, monkeypatch):
-        """Verify MABA_STRICT_BACKEND=1 turns fallback into immediate RuntimeError."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
         monkeypatch.setenv("MABA_STRICT_BACKEND", "1")
 
@@ -227,16 +173,9 @@ class TestAdversarialExceptionInjection:
             dispatch_dgda_step(q, k, v, alpha, b, w)
 
 
-# ==============================================================================
-# Dimension 2: Dynamic Backend Switching & Rapid Override
-# ==============================================================================
-
-
 class TestAdversarialDynamicBackendSwitching:
-    """Stress-test rapid and concurrent toggling of MABA_BACKEND during active operations."""
 
     def test_rapid_backend_toggle_loop_100_iterations(self, monkeypatch):
-        """Rapidly cycle MABA_BACKEND across 100 consecutive operations without state corruption."""
         backends_cycle = ["reference", "cpu", "auto", "ref", "pytorch", "openmp"]
 
         B, H, L, dk, dv = 1, 2, 8, 16, 16
@@ -267,7 +206,6 @@ class TestAdversarialDynamicBackendSwitching:
             assert torch.isfinite(out).all()
             assert torch.isfinite(state).all()
 
-            # Output should remain close to reference (< 1e-3 for CPU Neumann)
             diff = (out - ref_out).abs().max().item()
             assert diff < 1e-3, f"Iteration {i} with backend {chosen_backend} diff {diff:.6e} >= 1e-3"
 
@@ -282,7 +220,6 @@ class TestAdversarialDynamicBackendSwitching:
         "tpu_v5",
     ])
     def test_invalid_maba_backend_strictly_rejected(self, monkeypatch, invalid_backend):
-        """Verify invalid MABA_BACKEND values immediately raise ValueError across all dispatches."""
         monkeypatch.setenv("MABA_BACKEND", invalid_backend)
 
         with pytest.raises(ValueError, match="Unsupported MABA_BACKEND"):
@@ -312,7 +249,6 @@ class TestAdversarialDynamicBackendSwitching:
             dispatch_stream_superposition(q, q, q, torch.randn(1, 4, 3))
 
     def test_concurrent_multithreaded_backend_query(self, monkeypatch):
-        """Stress-test concurrent calls to get_backend() and dispatch_dgda_step across threads."""
         stop_event = threading.Event()
         errors = []
 
@@ -337,32 +273,31 @@ class TestAdversarialDynamicBackendSwitching:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=worker_loop, args=(i,)) for i in range(4)]
-        for t in threads:
-            t.start()
+        orig_backend = os.environ.get("MABA_BACKEND")
+        try:
+            threads = [threading.Thread(target=worker_loop, args=(i,)) for i in range(4)]
+            for t in threads:
+                t.start()
 
-        # Main thread toggles backend
-        for b in ["reference", "cpu", "auto", "ref"] * 5:
-            os.environ["MABA_BACKEND"] = b
+            for b in ["reference", "cpu", "auto", "ref"] * 5:
+                os.environ["MABA_BACKEND"] = b
 
-        stop_event.set()
-        for t in threads:
-            t.join()
+            stop_event.set()
+            for t in threads:
+                t.join()
 
-        assert len(errors) == 0, f"Encountered thread execution errors: {errors}"
-
-
-# ==============================================================================
-# Dimension 3: Extreme Shapes, Boundaries, and Dtype Rejection
-# ==============================================================================
+            assert len(errors) == 0, f"Encountered thread execution errors: {errors}"
+        finally:
+            if orig_backend is None:
+                os.environ.pop("MABA_BACKEND", None)
+            else:
+                os.environ["MABA_BACKEND"] = orig_backend
 
 
 class TestAdversarialExtremeShapesAndDtypes:
-    """Stress-test odd lengths, non-powers-of-2, uninitialized states, and dtypes."""
 
     @pytest.mark.parametrize("L", [1, 3, 17, 33, 65, 129, 0, 7, 31, 127, 255, 513])
     def test_prefill_odd_and_non_power_of_two_sequence_lengths(self, L: int):
-        """Verify odd sequence lengths (especially C=16 boundary remainder) execute cleanly."""
         B, H, dk, dv = 2, 2, 16, 16
         torch.manual_seed(100 + L)
         q = torch.randn(B, H, L, dk)
@@ -378,12 +313,10 @@ class TestAdversarialExtremeShapesAndDtypes:
         assert torch.isfinite(out).all()
         assert torch.isfinite(state).all()
 
-        # Compare with pure reference
         ref_out, ref_state = reference_dgda_prefill(q, k, v, alpha, b, w)
         if L > 0:
             diff_out = (out - ref_out).abs().max().item()
             diff_state = (state - ref_state).abs().max().item()
-            # CPU Neumann series tolerance is <= 1e-3
             assert diff_out < 1e-3, f"L={L}: prefill out diff {diff_out:.6e} >= 1e-3"
             assert diff_state < 1e-3, f"L={L}: prefill state diff {diff_state:.6e} >= 1e-3"
         else:
@@ -392,7 +325,6 @@ class TestAdversarialExtremeShapesAndDtypes:
 
     @pytest.mark.parametrize("L", [1, 3, 17, 33, 65, 129])
     def test_centroid_and_topk_odd_lengths_with_sub_topk_blocks(self, L: int):
-        """Verify centroid pooling and top-k gather when sequence produces fewer blocks than top-k."""
         B, d_idx = 2, 32
         block_size = 64
         top_k = 32
@@ -418,7 +350,6 @@ class TestAdversarialExtremeShapesAndDtypes:
         (64, 4, 16, 16),
     ])
     def test_large_batch_and_asymmetric_dimensions(self, B: int, H: int, dk: int, dv: int):
-        """Verify dispatcher handles large batch sizes (B=16..64) and asymmetric dk != dv."""
         L = 16
         q = torch.randn(B, H, L, dk)
         k = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1)
@@ -433,7 +364,6 @@ class TestAdversarialExtremeShapesAndDtypes:
         assert torch.isfinite(out).all()
 
     def test_uninitialized_state_strict_equivalence_with_zeros(self):
-        """Verify passing initial_state=None is bitwise equivalent to passing all-zeros initial_state."""
         B, H, L, dk, dv = 2, 2, 17, 16, 16
         torch.manual_seed(999)
         q = torch.randn(B, H, L, dk)
@@ -450,7 +380,6 @@ class TestAdversarialExtremeShapesAndDtypes:
         assert torch.equal(out_none, out_zero)
         assert torch.equal(s_none, s_zero)
 
-        # Step equivalence
         out_s_none, ns_none = dispatch_dgda_step(q[:, :, 0], k[:, :, 0], v[:, :, 0], alpha[:, :, 0], b[:, :, 0], w[:, :, 0], state=None)
         out_s_zero, ns_zero = dispatch_dgda_step(q[:, :, 0], k[:, :, 0], v[:, :, 0], alpha[:, :, 0], b[:, :, 0], w[:, :, 0], state=zero_state)
         assert torch.equal(out_s_none, out_s_zero)
@@ -458,7 +387,6 @@ class TestAdversarialExtremeShapesAndDtypes:
 
     @pytest.mark.parametrize("dt", [torch.float32, torch.float16, torch.bfloat16])
     def test_all_supported_floating_point_dtypes(self, dt: torch.dtype):
-        """Verify prefill and step operate cleanly across FP32, FP16, and BF16."""
         B, H, L, dk, dv = 1, 2, 8, 8, 8
         q = torch.randn(B, H, L, dk, dtype=dt)
         k = F.normalize(torch.randn(B, H, L, dk, dtype=dt), p=2, dim=-1)
@@ -474,7 +402,6 @@ class TestAdversarialExtremeShapesAndDtypes:
         assert torch.isfinite(state).all()
 
     def test_mixed_dtypes_strictly_rejected_with_type_error(self):
-        """Verify mismatched dtypes between tensors raise TypeError."""
         B, H, L, dk, dv = 1, 1, 4, 4, 4
         q = torch.randn(B, H, L, dk, dtype=torch.float32)
         k_fp16 = torch.randn(B, H, L, dk, dtype=torch.float16)
@@ -484,20 +411,16 @@ class TestAdversarialExtremeShapesAndDtypes:
         w = torch.sigmoid(torch.randn(B, H, L, dv, dtype=torch.float32))
         s_bf16 = torch.randn(B, H, dk, dv, dtype=torch.bfloat16)
 
-        # Mismatched k
         with pytest.raises(TypeError, match="Tensor dtypes must match"):
             dispatch_dgda_prefill(q, k_fp16, v, alpha, b, w)
 
-        # Mismatched initial_state
         with pytest.raises(TypeError, match="Tensor dtypes must match"):
             dispatch_dgda_prefill(q, q, v, alpha, b, w, initial_state=s_bf16)
 
-        # Mismatched step state
         with pytest.raises(TypeError, match="Tensor dtypes must match"):
             dispatch_dgda_step(q[:, :, 0], q[:, :, 0], v[:, :, 0], alpha[:, :, 0], b[:, :, 0], w[:, :, 0], state=s_bf16)
 
     def test_non_floating_point_dtypes_rejected(self):
-        """Verify non-floating point dtypes (e.g. torch.int32, torch.long) are rejected."""
         q_int = torch.randint(0, 10, (1, 1, 4, 4), dtype=torch.int32)
         k_int = torch.randint(0, 10, (1, 1, 4, 4), dtype=torch.int32)
         v_int = torch.randint(0, 10, (1, 1, 4, 4), dtype=torch.int32)
@@ -509,13 +432,7 @@ class TestAdversarialExtremeShapesAndDtypes:
             dispatch_dgda_prefill(q_int, k_int, v_int, alpha_int, b_int, w_int)
 
 
-# ==============================================================================
-# Dimension 4: Autograd Graph Unbrokenness Under Fallback
-# ==============================================================================
-
-
 class TestAdversarialAutogradGraphUnbrokenness:
-    """Stress-test autograd backward gradient continuity when kernels crash and fall back."""
 
     @pytest.mark.parametrize("exc_class", [
         ZeroDivisionError,
@@ -526,7 +443,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
     def test_prefill_all_7_inputs_receive_unbroken_gradients_under_fallback(
         self, monkeypatch, exc_class
     ):
-        """Verify all 7 inputs of dispatch_dgda_prefill receive intact gradients when kernel crashes."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
 
         def broken_prefill(q, k, v, alpha, b, w, **kw):
@@ -558,7 +474,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
             assert t.grad.shape == t.shape
 
     def test_prefill_fallback_gradients_match_reference_bitwise(self, monkeypatch):
-        """Verify fallback gradients match pure-reference gradients bitwise."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
 
         register_kernel("cpu", "dgda_prefill")(
@@ -568,7 +483,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
         B, H, L, dk, dv = 1, 1, 4, 4, 4
         torch.manual_seed(888)
 
-        # Tensors for fallback pass
         q_fb = torch.randn(B, H, L, dk, requires_grad=True)
         k_fb = F.normalize(torch.randn(B, H, L, dk), p=2, dim=-1).requires_grad_(True)
         v_fb = torch.randn(B, H, L, dv, requires_grad=True)
@@ -577,7 +491,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
         w_fb = torch.sigmoid(torch.randn(B, H, L, dv)).requires_grad_(True)
         s_fb = torch.randn(B, H, dk, dv, requires_grad=True)
 
-        # Clone identical tensors for pure reference pass
         q_ref = q_fb.detach().clone().requires_grad_(True)
         k_ref = k_fb.detach().clone().requires_grad_(True)
         v_ref = v_fb.detach().clone().requires_grad_(True)
@@ -586,11 +499,9 @@ class TestAdversarialAutogradGraphUnbrokenness:
         w_ref = w_fb.detach().clone().requires_grad_(True)
         s_ref = s_fb.detach().clone().requires_grad_(True)
 
-        # 1. Forward & backward under fallback
         out_f, state_f = dispatch_dgda_prefill(q_fb, k_fb, v_fb, alpha_fb, b_fb, w_fb, initial_state=s_fb)
         (out_f.sum() + state_f.sum()).backward()
 
-        # 2. Forward & backward under pure reference
         out_r, state_r = reference_dgda_prefill(q_ref, k_ref, v_ref, alpha_ref, b_ref, w_ref, initial_state=s_ref)
         (out_r.sum() + state_r.sum()).backward()
 
@@ -603,15 +514,12 @@ class TestAdversarialAutogradGraphUnbrokenness:
         assert torch.equal(s_fb.grad, s_ref.grad)
 
     def test_partial_forward_graph_construction_before_crash_resilience(self, monkeypatch):
-        """Verify that intermediate autograd nodes created before kernel crash do not corrupt backward."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
 
         def partially_executed_kernel(q, k, v, alpha, b, w, **kwargs):
-            # Create several intermediate autograd nodes attached to inputs
             dummy_1 = (q * 3.14159).sum()
             dummy_2 = (k.unsqueeze(-1) * v.unsqueeze(-2)).sum()
             dummy_3 = (alpha * b).mean()
-            # Then crash
             if dummy_1.item() > -1e9:
                 raise CustomCUDARuntimeError("Crash after intermediate ops attached to autograd graph")
 
@@ -636,7 +544,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
             assert (t.grad.abs() > 0.0).any()
 
     def test_step_decode_all_inputs_unbroken_autograd_under_fallback(self, monkeypatch):
-        """Verify dispatch_dgda_step maintains unbroken autograd graph across all inputs."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
         register_kernel("cpu", "dgda_step")(
             lambda **kw: (_ for _ in ()).throw(ZeroDivisionError("Decode step div0"))
@@ -661,7 +568,6 @@ class TestAdversarialAutogradGraphUnbrokenness:
             assert (t.grad.abs() > 0.0).any()
 
     def test_double_backward_higher_order_gradient_continuity(self, monkeypatch):
-        """Verify second-order gradients (grad of grad) flow cleanly through fallback."""
         monkeypatch.setenv("MABA_BACKEND", "cpu")
         register_kernel("cpu", "dgda_prefill")(
             lambda **kw: (_ for _ in ()).throw(CustomCUDARuntimeError("Double backward test crash"))

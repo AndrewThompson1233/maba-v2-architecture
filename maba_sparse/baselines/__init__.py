@@ -1,5 +1,6 @@
 from maba_sparse.baselines.dense_transformer import (
     DenseAttention,
+    DenseLM,
     DenseTransformerBlock,
     DenseTransformerForCausalLM,
     DenseTransformerLM,
@@ -7,6 +8,7 @@ from maba_sparse.baselines.dense_transformer import (
 
 __all__ = [
     "DenseAttention",
+    "DenseLM",
     "DenseTransformerBlock",
     "DenseTransformerForCausalLM",
     "DenseTransformerLM",

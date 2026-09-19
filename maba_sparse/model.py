@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-import math
 from typing import Any, List, Optional, Tuple, Union
 import torch
 import torch.nn as nn
@@ -13,12 +11,18 @@ from maba_sparse.layers.sparse_attention import MabaSparseAttention
 class RMSNorm(nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6) -> None:
         super().__init__()
-        self.eps = eps
+        self.dim = dim
+        self.eps = max(float(eps), 1e-6)
         self.weight = nn.Parameter(torch.ones(dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        v = x.pow(2).mean(-1, keepdim=True)
-        return x * torch.rsqrt(v + self.eps) * self.weight
+        if hasattr(F, "rms_norm"):
+            return F.rms_norm(x, (self.dim,), self.weight, eps=self.eps)
+        orig_dtype = x.dtype
+        xf = x.to(torch.float32)
+        v = xf.pow(2).mean(-1, keepdim=True)
+        r = torch.rsqrt(v + self.eps)
+        return (xf * r).to(orig_dtype) * self.weight
 
 
 class SwiGLUFFN(nn.Module):
@@ -73,12 +77,12 @@ class MabaBlock(nn.Module):
 
         self.norm1 = RMSNorm(config.dim, eps=config.rms_norm_eps)
         if self.is_attention:
-            self.mixer = MabaSparseAttention(config)
+            self.mixer = MabaSparseAttention(config, ablation_mode=ablation_mode)
         else:
             self.mixer = DGDALayer(config)
 
         self.norm2 = RMSNorm(config.dim, eps=config.rms_norm_eps)
-        inter = getattr(config, "intermediate_size", 1248)
+        inter = getattr(config, "intermediate_size", 1728)
         self.ffn = SwiGLUFFN(config.dim, inter)
 
         b = getattr(config, "residual_gate_bias", 2.0)
@@ -89,15 +93,34 @@ class MabaBlock(nn.Module):
         self,
         x: torch.Tensor,
         state: Optional[torch.Tensor] = None,
-        conv_state: Optional[torch.Tensor] = None,
+        conv_state: Optional[Any] = None,
         past_c_kv: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Any], Optional[torch.Tensor]]:
         h = self.norm1(x)
         if self.is_attention:
             mo, nc = self.mixer(h, past_c_kv=past_c_kv)
             ns, ncv = None, None
         else:
             mo, ns, ncv = self.mixer(h, state=state, conv_state=conv_state)
+            nc = None
+
+        x = x + torch.sigmoid(self.res_gate1) * mo
+        x = x + torch.sigmoid(self.res_gate2) * self.ffn(self.norm2(x))
+        return x, ns, ncv, nc
+
+    def step(
+        self,
+        x: torch.Tensor,
+        state: Optional[torch.Tensor] = None,
+        conv_state: Optional[Any] = None,
+        past_c_kv: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Any], Optional[torch.Tensor]]:
+        h = self.norm1(x)
+        if self.is_attention:
+            mo, nc = self.mixer(h, past_c_kv=past_c_kv)
+            ns, ncv = None, None
+        else:
+            mo, ns, ncv = self.mixer.step(h, state=state, conv_state=conv_state)
             nc = None
 
         x = x + torch.sigmoid(self.res_gate1) * mo
@@ -121,8 +144,12 @@ class MabaSparseOutput:
     def __iter__(self):
         return iter((self.logits, self.loss))
 
-    def __getitem__(self, idx: int) -> Any:
-        return (self.logits, self.loss, self.mtp_logits, self.past_states)[idx]
+    def __getitem__(self, idx: Union[int, str]) -> Any:
+        if isinstance(idx, str):
+            if hasattr(self, idx):
+                return getattr(self, idx)
+            raise KeyError(f"No key '{idx}' in MabaSparseOutput")
+        return (self.logits, self.loss, self.past_states, self.mtp_logits)[idx]
 
     def __repr__(self) -> str:
         return (
@@ -192,7 +219,7 @@ class MabaSparseForCausalLM(nn.Module):
 
         nps = []
         for i, layer in enumerate(self.layers):
-            ls = past_states[i] if past_states is not None else None
+            ls = past_states[i] if past_states is not None and i < len(past_states) else None
             st = ls[0] if ls else None
             cv = ls[1] if ls else None
             pk = ls[2] if ls else None
@@ -206,14 +233,18 @@ class MabaSparseForCausalLM(nn.Module):
         loss = None
         mtp_logits = None
         if targets is not None:
-            loss = F.cross_entropy(logits.view(-1, self.config.vocab_size), targets.view(-1))
-            if l > 2:
-                mtp_logits = self.mtp_head(xn[:, :-1, :])
+            v_size = self.config.vocab_size
+            loss = F.cross_entropy(logits.view(-1, v_size), targets.view(-1), ignore_index=-100)
+            mtp_logits = self.mtp_head(xn[:, :-1, :])
+            if mtp_logits.numel() > 0:
                 ml = F.cross_entropy(
-                    mtp_logits.contiguous().view(-1, self.config.vocab_size),
+                    mtp_logits.contiguous().view(-1, v_size),
                     targets[:, 1:].contiguous().view(-1),
+                    ignore_index=-100,
                 )
                 loss = loss + 0.3 * ml
+            else:
+                loss = loss + 0.0 * mtp_logits.sum()
 
         return MabaSparseOutput(
             logits=logits,
@@ -221,6 +252,28 @@ class MabaSparseForCausalLM(nn.Module):
             mtp_logits=mtp_logits,
             past_states=nps,
         )
+
+    def step(
+        self,
+        input_ids: torch.Tensor,
+        past_states: Optional[List[Any]] = None,
+    ) -> Tuple[torch.Tensor, List[Any]]:
+        b, l = input_ids.shape
+        assert l == 1, f"step() expects single-token input (L=1), got L={l}"
+        x = self.embeddings(input_ids)
+        next_states = []
+        for i, layer in enumerate(self.layers):
+            ls = past_states[i] if past_states is not None and i < len(past_states) else None
+            st = ls[0] if ls else None
+            cv = ls[1] if ls else None
+            pk = ls[2] if ls else None
+
+            x, nst, ncv, nck = layer.step(x, state=st, conv_state=cv, past_c_kv=pk)
+            next_states.append((nst, ncv, nck))
+
+        xn = self.final_norm(x)
+        logits = self.lm_head(self.head_proj(xn))
+        return logits, next_states
 
     @torch.no_grad()
     def generate(
@@ -230,22 +283,36 @@ class MabaSparseForCausalLM(nn.Module):
         temperature: float = 1.0,
         top_k: Optional[int] = 50,
     ) -> torch.Tensor:
+        was_training = self.training
         self.eval()
-        gen = input_ids.clone()
-        for _ in range(max_new_tokens):
-            out = self(gen)
-            nl = out.logits[:, -1, :]
-            if temperature > 0:
-                nl = nl / temperature
-                if top_k is not None:
-                    v, _ = torch.topk(nl, min(top_k, nl.size(-1)))
-                    nl[nl < v[:, [-1]]] = float("-inf")
-                p = F.softmax(nl, dim=-1)
-                tok = torch.multinomial(p, num_samples=1)
-            else:
-                tok = torch.argmax(nl, dim=-1, keepdim=True)
-            gen = torch.cat([gen, tok], dim=1)
-        return gen
+        try:
+            out = self(input_ids)
+            past_states = out.past_states
+            next_logits = out.logits[:, -1:, :]
+            tokens = [input_ids]
+
+            for i in range(max_new_tokens):
+                nl = next_logits.squeeze(1)
+                if temperature > 0:
+                    nl = nl / temperature
+                    if top_k is not None:
+                        k_val = min(top_k, nl.size(-1))
+                        v, _ = torch.topk(nl, k_val)
+                        nl = nl.masked_fill(nl < v[:, [-1]], float("-inf"))
+                    p = F.softmax(nl, dim=-1)
+                    tok = torch.multinomial(p, num_samples=1)
+                else:
+                    tok = torch.argmax(nl, dim=-1, keepdim=True)
+                tokens.append(tok)
+
+                if i < max_new_tokens - 1:
+                    next_logits, past_states = self.step(tok, past_states=past_states)
+
+            return torch.cat(tokens, dim=1)
+        finally:
+            self.train(was_training)
 
 
 MabaSparseLM = MabaSparseForCausalLM
+MabaLM = MabaSparseForCausalLM
+MabaOutput = MabaSparseOutput

@@ -1,22 +1,7 @@
-"""Empirical Challenger Verification & Stress-Test Suite for DGDALayer.
-
-Conducted by: teamwork_preview_challenger_m1_2
-Target: maba_sparse.layers.dgda.DGDALayer
-
-Verifies:
-1. Causal Masking Isolation:
-   - Output perturbation: Perturbing token t produces strictly 0.0 difference on tokens < t.
-   - Autograd Jacobian: d(output_{<t}) / d(input_t) == 0.0 identically.
-2. Strict O(1) Memory Footprint:
-   - Measures recurrent state tensor byte size across sequence lengths L = 16, 64, 256, 1024, 4096.
-   - Asserts memory is strictly invariant (zero byte variance).
-3. Step Decode Loop vs Forward Pass:
-   - Asserts max output and state discrepancy < 1e-5 across multiple sequence lengths and initial conditions.
-"""
 
 import os
 import sys
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -27,12 +12,10 @@ from maba_sparse.layers.dgda import DGDALayer
 
 
 class TestChallengerCausalIsolation:
-    """Stress tests strict causal isolation in forward pass and backward autograd."""
 
     @pytest.mark.parametrize("chunk_size", [16, 32])
     @pytest.mark.parametrize("L", [32, 64])
     def test_forward_output_perturbation_isolation(self, chunk_size: int, L: int):
-        """Verify that perturbing token t has strictly 0.0 impact on tokens < t."""
         torch.manual_seed(42 + L + chunk_size)
         config = MabaSparseConfig(dim=128, n_heads=4, d_head=32)
         layer = DGDALayer(config)
@@ -44,7 +27,6 @@ class TestChallengerCausalIsolation:
         with torch.no_grad():
             base_out, _, _ = layer(x, chunk_size=chunk_size)
 
-        # Test perturbation across multiple critical token locations
         perturb_indices = [0, 1, chunk_size - 1, chunk_size, chunk_size + 1, L - 2, L - 1]
         perturb_indices = sorted(list(set([idx for idx in perturb_indices if 0 <= idx < L])))
 
@@ -62,12 +44,10 @@ class TestChallengerCausalIsolation:
                     f"tokens < {t} differed by max {past_diff:.6e}"
                 )
 
-            # Future tokens (>= t) must reflect the perturbation
             future_diff = (base_out[:, t:, :] - pert_out[:, t:, :]).abs().max().item()
             assert future_diff > 1e-4, f"Perturbation at t={t} had no effect on future tokens"
 
     def test_autograd_jacobian_causal_triangularity(self):
-        """Verify full autograd Jacobian d(output_{<t}) / d(input_t) == 0.0 identically."""
         torch.manual_seed(1337)
         config = MabaSparseConfig(dim=64, n_heads=2, d_head=32)
         layer = DGDALayer(config)
@@ -80,8 +60,6 @@ class TestChallengerCausalIsolation:
                 out, _, _ = layer(inp, chunk_size=16)
                 return out
 
-            # Jacobian J shape: [1, L, D, 1, L, D]
-            # J[0, s, :, 0, t, :] = d(output_s) / d(input_t)
             J = torch.autograd.functional.jacobian(fwd_fn, x)
 
             max_past_grad = 0.0
@@ -102,7 +80,6 @@ class TestChallengerCausalIsolation:
             )
 
     def test_autograd_slice_gradient_isolation_long_sequence(self):
-        """Verify autograd loss on tokens < t produces exactly 0.0 gradient on tokens >= t."""
         torch.manual_seed(2026)
         config = MabaSparseConfig(dim=128, n_heads=4, d_head=32)
         layer = DGDALayer(config)
@@ -112,7 +89,6 @@ class TestChallengerCausalIsolation:
         x = torch.randn(1, L, config.dim, requires_grad=True)
         out, _, _ = layer(x, chunk_size=16)
 
-        # Loss computed strictly on tokens 0..15 (chunk 0)
         target_t = 16
         loss = out[:, :target_t, :].sum()
         loss.backward()
@@ -127,11 +103,9 @@ class TestChallengerCausalIsolation:
 
 
 class TestChallengerMemoryInvariance:
-    """Stress tests strict O(1) recurrent memory footprint invariance."""
 
     def test_o1_state_byte_size_invariance(self):
-        """Measure recurrent state tensor byte size across L = 16, 64, 256, 1024, 4096."""
-        config = MabaSparseConfig()  # 101M MABA-Tiny: dim=640, n_heads=10, d_head=64
+        config = MabaSparseConfig()
         layer = DGDALayer(config)
         layer.eval()
 
@@ -147,7 +121,6 @@ class TestChallengerMemoryInvariance:
             with torch.no_grad():
                 _, state, conv_state = layer(x, chunk_size=16)
 
-            # Recurrent state bytes
             sb = state.nelement() * state.element_size()
             storage_bytes = state.untyped_storage().nbytes()
             assert sb == storage_bytes, f"Storage mismatch: {sb} != {storage_bytes}"
@@ -155,17 +128,15 @@ class TestChallengerMemoryInvariance:
             measured_bytes.append(sb)
             measured_shapes.append(tuple(state.shape))
 
-            # Conv state bytes
             cb = sum(c.nelement() * c.element_size() for c in conv_state)
             measured_conv_bytes.append(cb)
 
-        # Invariance assertions
         unique_bytes = set(measured_bytes)
         unique_shapes = set(measured_shapes)
         unique_conv_bytes = set(measured_conv_bytes)
 
         expected_elements = 1 * config.n_heads * config.d_head * config.d_head
-        expected_bytes = expected_elements * 4  # float32 = 4 bytes
+        expected_bytes = expected_elements * 4
 
         assert len(unique_bytes) == 1, f"State byte size varied across lengths: {measured_bytes}"
         assert measured_bytes[0] == expected_bytes, (
@@ -176,7 +147,6 @@ class TestChallengerMemoryInvariance:
         assert len(unique_conv_bytes) == 1, f"Conv state byte size varied: {measured_conv_bytes}"
 
     def test_o1_step_memory_stability_50_steps(self):
-        """Verify 50 unrolled decode steps maintain identical state byte size without leak."""
         config = MabaSparseConfig(dim=128, n_heads=4, d_head=32)
         layer = DGDALayer(config)
         layer.eval()
@@ -196,11 +166,9 @@ class TestChallengerMemoryInvariance:
 
 
 class TestChallengerStepVsForwardEquivalence:
-    """Stress tests step() decode loop vs forward() pass (< 1e-5 discrepancy)."""
 
     @pytest.mark.parametrize("L", [16, 32, 48, 64, 128])
     def test_step_loop_vs_forward_standard_input(self, L: int):
-        """Verify max discrepancy < 1e-5 on sequence lengths up to 128."""
         torch.manual_seed(1000 + L)
         config = MabaSparseConfig(dim=256, n_heads=4, d_head=64)
         layer = DGDALayer(config)
@@ -212,7 +180,6 @@ class TestChallengerStepVsForwardEquivalence:
         with torch.no_grad():
             out_fwd, state_fwd, _ = layer(x, chunk_size=16)
 
-            # Unroll step()
             state = None
             conv_state = None
             step_outs = []
@@ -231,7 +198,6 @@ class TestChallengerStepVsForwardEquivalence:
 
     @pytest.mark.parametrize("L", [7, 15, 17, 33, 50])
     def test_step_loop_vs_forward_non_divisible_lengths(self, L: int):
-        """Verify max discrepancy < 1e-5 for sequence lengths non-divisible by chunk_size=16."""
         torch.manual_seed(2000 + L)
         config = MabaSparseConfig(dim=256, n_heads=4, d_head=64)
         layer = DGDALayer(config)
@@ -260,7 +226,6 @@ class TestChallengerStepVsForwardEquivalence:
         assert diff_state < 1e-5, f"Non-divisible state diff {diff_state:.6e} >= 1e-5 at L={L}"
 
     def test_step_loop_vs_forward_with_prior_state(self):
-        """Verify max discrepancy < 1e-5 when starting from non-zero initial recurrent state."""
         torch.manual_seed(3000)
         config = MabaSparseConfig(dim=256, n_heads=4, d_head=64)
         layer = DGDALayer(config)
@@ -291,12 +256,10 @@ class TestChallengerStepVsForwardEquivalence:
 
 
 def run_standalone_measurements():
-    """Run empirical benchmark and print table of results."""
     print("=" * 80)
     print("EMPIRICAL CHALLENGER STRESS HARNESS EXECUTION")
     print("=" * 80)
 
-    # 1. Causal Masking Isolation
     print("\n--- 1. Causal Masking Isolation Verification ---")
     torch.manual_seed(42)
     config_med = MabaSparseConfig(dim=128, n_heads=4, d_head=32)
@@ -322,7 +285,6 @@ def run_standalone_measurements():
     print(f"Overall Forward Output Perturbation Max Past Leakage: {max_causal_past_diff:.10f} (Expected: 0.0)")
     assert max_causal_past_diff == 0.0, "Forward causal isolation failed!"
 
-    # Jacobian check
     config_small = MabaSparseConfig(dim=64, n_heads=2, d_head=32)
     layer_small = DGDALayer(config_small)
     layer_small.eval()
@@ -340,9 +302,8 @@ def run_standalone_measurements():
     print(f"Full Autograd Jacobian d(output_<t)/d(input_t) Max Value: {max_jac_past:.10f} (Expected: 0.0)")
     assert max_jac_past == 0.0, "Autograd Jacobian causal isolation failed!"
 
-    # 2. Strict O(1) Memory Footprint
     print("\n--- 2. Strict O(1) Memory Footprint Invariance Verification ---")
-    config_101m = MabaSparseConfig()  # 101M MABA-Tiny: dim=640, n_heads=10, d_head=64
+    config_101m = MabaSparseConfig()
     layer_101m = DGDALayer(config_101m)
     layer_101m.eval()
 
@@ -376,7 +337,6 @@ def run_standalone_measurements():
     assert len(set(all_conv_bytes)) == 1, "Conv state memory varied across sequence lengths!"
     print(f"Memory Invariance Confirmed: Exactly {all_state_bytes[0]} bytes across all sequence lengths.")
 
-    # 3. Step Decode Loop vs Forward Pass
     print("\n--- 3. Step Decode Loop vs Forward Pass Equivalence Verification ---")
     config_eval = MabaSparseConfig(dim=256, n_heads=4, d_head=64)
     layer_eval = DGDALayer(config_eval)

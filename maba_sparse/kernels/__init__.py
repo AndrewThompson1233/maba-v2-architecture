@@ -1,16 +1,15 @@
-"""Maba Sparse Hardware Acceleration Kernels Package.
-
-Exports the unified hardware dispatcher and all public operation entry points.
-"""
 
 from maba_sparse.kernels.common import (
     normalize_keys,
+    ref_centroids,
     ref_compute_centroids,
     ref_dgda_prefill,
     ref_dgda_sequential,
     ref_dgda_step,
     ref_index_topk,
     ref_stream_superposition,
+    ref_superposition,
+    ref_topk,
     reference_compute_centroids,
     reference_dgda_prefill,
     reference_dgda_sequential,
@@ -29,8 +28,17 @@ from maba_sparse.kernels.cpu_dgda import (
     get_cpu_num_threads,
     set_cpu_num_threads,
 )
+from maba_sparse.kernels.cpu_indexer import (
+    cpu_compute_centroids,
+    cpu_index_topk,
+    cpu_stream_superposition,
+)
 from maba_sparse.kernels.dispatcher import (
+    clear_dispatcher_cache,
     clear_fallback_warnings,
+    compute_centroids,
+    dgda_prefill,
+    dgda_step,
     dispatch_compute_centroids,
     dispatch_dgda_prefill,
     dispatch_dgda_step,
@@ -38,33 +46,73 @@ from maba_sparse.kernels.dispatcher import (
     dispatch_stream_superposition,
     get_backend,
     get_kernel,
+    index_topk,
     is_cuda_sm75_available,
     is_openmp_available,
     is_triton_available,
     is_xla_available,
     register_kernel,
+    stream_superposition,
+)
+from maba_sparse.kernels.triton_dgda import (
+    triton_dgda_prefill,
+    triton_dgda_step,
+)
+from maba_sparse.kernels.triton_indexer import (
+    triton_compute_centroids,
+    triton_index_topk,
+    triton_stream_superposition,
+)
+from maba_sparse.kernels.xla_dgda import (
+    DEFAULT_STATIC_BUCKETS,
+    get_static_bucket_length,
+    xla_dgda_prefill,
+    xla_dgda_step,
+)
+from maba_sparse.kernels.xla_indexer import (
+    xla_compute_centroids,
+    xla_index_topk,
+    xla_stream_superposition,
 )
 
 __all__ = [
-    # Hardware detection & registry
     "get_backend",
     "register_kernel",
     "get_kernel",
     "clear_fallback_warnings",
+    "clear_dispatcher_cache",
     "is_cuda_sm75_available",
     "is_triton_available",
     "is_xla_available",
     "is_openmp_available",
-    # Dispatch operations
     "dispatch_dgda_prefill",
     "dispatch_dgda_step",
     "dispatch_compute_centroids",
     "dispatch_index_topk",
     "dispatch_stream_superposition",
-    # Reference implementations
-    "normalize_keys",
+    "dgda_prefill",
+    "dgda_step",
+    "compute_centroids",
+    "index_topk",
+    "stream_superposition",
     "ref_dgda_prefill",
     "ref_dgda_step",
+    "ref_centroids",
+    "ref_topk",
+    "ref_superposition",
+    "triton_dgda_prefill",
+    "triton_dgda_step",
+    "triton_compute_centroids",
+    "triton_index_topk",
+    "triton_stream_superposition",
+    "DEFAULT_STATIC_BUCKETS",
+    "get_static_bucket_length",
+    "xla_dgda_prefill",
+    "xla_dgda_step",
+    "xla_compute_centroids",
+    "xla_index_topk",
+    "xla_stream_superposition",
+    "normalize_keys",
     "ref_dgda_sequential",
     "ref_compute_centroids",
     "ref_index_topk",
@@ -79,9 +127,11 @@ __all__ = [
     "validate_dgda_step_inputs",
     "validate_indexer_inputs",
     "validate_superposition_inputs",
-    # CPU implementations & utilities
     "cpu_dgda_prefill",
     "cpu_dgda_step",
+    "cpu_compute_centroids",
+    "cpu_index_topk",
+    "cpu_stream_superposition",
     "get_cpu_num_threads",
     "set_cpu_num_threads",
     "cpu_threads",

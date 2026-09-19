@@ -1,25 +1,12 @@
-"""Adversarial stress test suite for DGDALayer chunkwise vs sequential equivalence.
 
-Empirically challenges:
-1. Chunkwise prefill vs sequential step across random inputs at sequence lengths L=16, 32, 64, 128, 512, 1024.
-2. Precision stability across FP32, FP16, and BF16.
-3. Near-zero decay (alpha -> 0) and zero decay (alpha -> 1).
-4. Extreme input magnitudes (+/- 10, +/- 50, +/- 100) and correlated/constant inputs.
-5. 101M MABA-Tiny full-scale configuration stress test.
-6. Empirical demonstration of order-3 Neumann series divergence vs exact triangular solve.
-"""
-
-import math
 import os
 import sys
 from typing import Optional, Tuple, Union
 
 import pytest
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
-# Ensure repo root is on sys.path
 repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if repo_root not in sys.path:
     sys.path.insert(0, repo_root)
@@ -39,10 +26,6 @@ def chunkwise_exact_solve(
     conv_state: Optional[Union[ConvState, Tuple[torch.Tensor, ...]]] = None,
     chunk_size: int = 16,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Chunkwise prefill using exact triangular solve (torch.linalg.solve_triangular).
-
-    Used as an oracle to isolate Neumann series truncation error from the rest of chunking math.
-    """
     B, L, D = x.shape
     H, d_k, d_v = layer.n_heads, layer.d_head, layer.d_head
 
@@ -122,13 +105,8 @@ def chunkwise_exact_solve(
     return layer.o_proj(out), curr_S
 
 
-# ==============================================================================
-# PyTest Suite
-# ==============================================================================
-
 @pytest.mark.parametrize("seq_len", [16, 32, 64, 128, 512, 1024])
 def test_random_inputs_large_seq_lens(seq_len):
-    """Stress-test random inputs across sequence lengths up to L=1024."""
     torch.manual_seed(42 + seq_len)
     config = MabaSparseConfig(dim=64, n_heads=2, d_head=32, kernel_size=4, chunk_size=16)
     layer = DGDALayer(config).eval()
@@ -146,7 +124,6 @@ def test_random_inputs_large_seq_lens(seq_len):
 
 @pytest.mark.parametrize("decay_mode", ["near_zero", "near_one"])
 def test_decay_boundary_stability(decay_mode):
-    """Stress-test near-zero decay (alpha -> 0) and zero decay (alpha -> 1)."""
     torch.manual_seed(123)
     config = MabaSparseConfig(dim=64, n_heads=2, d_head=32, kernel_size=4, chunk_size=16)
     layer = DGDALayer(config).eval()
@@ -170,7 +147,6 @@ def test_decay_boundary_stability(decay_mode):
 
 @pytest.mark.parametrize("dtype", [torch.float32, torch.float16, torch.bfloat16])
 def test_precision_chunk_vs_seq(dtype):
-    """Evaluate precision stability across FP32, FP16, BF16."""
     torch.manual_seed(456)
     config = MabaSparseConfig(dim=64, n_heads=2, d_head=32, kernel_size=4, chunk_size=16)
     layer = DGDALayer(config).to(dtype).eval()
@@ -183,8 +159,6 @@ def test_precision_chunk_vs_seq(dtype):
     diff_state = (state_chunk.float() - state_seq.float()).abs().max().item()
 
     if dtype == torch.bfloat16:
-        # BF16 has 8-bit mantissa; relative machine epsilon is ~7.8e-3.
-        # Strict < 1e-4 fails due to mantissa truncation in pure BF16 recurrence.
         assert diff_out < 1e-3, f"BF16 output diff {diff_out:.6e} exceeds 1e-3"
         assert diff_state < 2e-3, f"BF16 state diff {diff_state:.6e} exceeds 2e-3"
     else:
@@ -193,8 +167,6 @@ def test_precision_chunk_vs_seq(dtype):
 
 
 def test_extreme_inputs_exact_solve_vs_neumann_comparison():
-    """Empirically demonstrates that extreme magnitude inputs cause order-3 Neumann series to diverge,
-    while exact triangular solve preserves equivalence within < 1e-4."""
     torch.manual_seed(789)
     config = MabaSparseConfig(dim=64, n_heads=2, d_head=32, kernel_size=4, chunk_size=16)
     layer = DGDALayer(config).eval()
@@ -207,11 +179,9 @@ def test_extreme_inputs_exact_solve_vs_neumann_comparison():
     diff_out_neumann = (out_chunk - out_seq).abs().max().item()
     diff_state_neumann = (state_chunk - state_seq).abs().max().item()
 
-    # Document divergence of Neumann series under extreme magnitude
     print(f"\n[Neumann-3 Extreme +/-100] Out diff = {diff_out_neumann:.4f}, State diff = {diff_state_neumann:.4f}")
     assert diff_out_neumann > 1.0, f"Expected Neumann series to diverge under extreme input, got diff {diff_out_neumann}"
 
-    # Verify that exact triangular solve resolves the divergence completely
     out_exact, state_exact = chunkwise_exact_solve(layer, x, chunk_size=16)
     diff_out_exact = (out_exact - out_seq).abs().max().item()
     diff_state_exact = (state_exact - state_seq).abs().max().item()
@@ -221,7 +191,6 @@ def test_extreme_inputs_exact_solve_vs_neumann_comparison():
 
 
 def test_101m_scale_extreme_inputs_exact_solve():
-    """Demonstrates extreme magnitude explosion at 101M MABA-Tiny scale under Neumann-3 and resolution via exact solve."""
     torch.manual_seed(999)
     config = MabaSparseConfig(dim=640, n_heads=10, d_head=64, kernel_size=4, chunk_size=16)
     layer = DGDALayer(config).eval()
@@ -237,7 +206,6 @@ def test_101m_scale_extreme_inputs_exact_solve():
     print(f"\n[101M Neumann-3 Explosion] Out diff = {diff_out:.2f}, State diff = {diff_state:.2f}")
     assert diff_state > 1.0, f"Expected state diff divergence at 101M scale, got {diff_state}"
 
-    # Verify exact solve achieves < 1e-4 even at 101M scale
     out_exact, state_exact = chunkwise_exact_solve(layer, x, chunk_size=16)
     diff_exact_state = (state_exact - state_seq).abs().max().item()
     diff_exact_out = (out_exact - out_seq).abs().max().item()
@@ -246,12 +214,7 @@ def test_101m_scale_extreme_inputs_exact_solve():
     assert diff_exact_out < 1e-4, f"101M exact solve out diff {diff_exact_out:.6e} >= 1e-4"
 
 
-# ==============================================================================
-# Standalone CLI Report Runner
-# ==============================================================================
-
 def run_stress_suite():
-    """Run full suite and generate empirical table of results."""
     print("=" * 80)
     print("EMPIRICAL STRESS TEST SUITE: DGDALayer NUMERICAL ACCURACY & EQUIVALENCE")
     print("=" * 80)
@@ -272,7 +235,6 @@ def run_stress_suite():
             "status": "PASS" if passed else "FAIL",
         })
 
-    # 1. Random inputs across lengths
     for L in [16, 32, 64, 128, 512, 1024]:
         torch.manual_seed(100 + L)
         x = torch.randn(1, L, config_tiny.dim)
@@ -280,7 +242,6 @@ def run_stress_suite():
         out_c, st_c, _ = layer_tiny(x, chunk_size=16)
         record("Random Inputs", f"L={L}", (out_c - out_s).abs().max().item(), (st_c - st_s).abs().max().item())
 
-    # 2. Extreme inputs
     for mag in [10.0, 50.0, 100.0]:
         x_pos = torch.full((1, 32, config_tiny.dim), mag)
         out_s, st_s, _ = sequential_dgda_reference(x_pos, layer_tiny)
@@ -297,7 +258,6 @@ def run_stress_suite():
         out_c, st_c, _ = layer_tiny(x_mix, chunk_size=16)
         record("Extreme Inputs", f"Gaussian x{mag}", (out_c - out_s).abs().max().item(), (st_c - st_s).abs().max().item())
 
-    # 3. Precision stability
     for dt in [torch.float32, torch.float16, torch.bfloat16]:
         l_dt = DGDALayer(config_tiny).to(dt).eval()
         x = torch.randn(2, 32, config_tiny.dim, dtype=dt)
@@ -311,7 +271,6 @@ def run_stress_suite():
             threshold=1e-4 if dt != torch.bfloat16 else 2e-3,
         )
 
-    # 4. Decay boundary
     with torch.no_grad():
         layer_tiny.gate_alpha.weight.fill_(10.0)
         x = torch.randn(2, 32, config_tiny.dim)
@@ -324,7 +283,6 @@ def run_stress_suite():
         out_c, st_c, _ = layer_tiny(x, chunk_size=16)
         record("Decay Boundary", "Near One (alpha->1)", (out_c - out_s).abs().max().item(), (st_c - st_s).abs().max().item())
 
-    # 5. 101M Scale
     config_101m = MabaSparseConfig(dim=640, n_heads=10, d_head=64, kernel_size=4, chunk_size=16)
     layer_101m = DGDALayer(config_101m).eval()
     x_101m_rand = torch.randn(1, 128, config_101m.dim)
