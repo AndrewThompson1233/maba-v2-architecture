@@ -59,20 +59,39 @@ class DGIndexer(nn.Module):
         if past_k_idx is not None:
             ki_full = torch.cat([past_k_idx, ki], dim=1)
             c = dispatch_compute_centroids(ki_full, block_size=self.block_size)
+        elif not self.training and l == 1 and self._cached_k_idx is not None and self._cached_k_idx.shape[0] == b:
+            self._cached_k_idx = torch.cat([self._cached_k_idx, ki.detach()], dim=1)
+            cur_len = self._cached_k_idx.shape[1]
+            if cur_len % self.block_size == 0:
+                new_c = dispatch_compute_centroids(
+                    self._cached_k_idx[:, -self.block_size :], block_size=self.block_size
+                )
+                if self._cached_centroids is not None:
+                    self._cached_centroids = torch.cat([self._cached_centroids, new_c], dim=1)
+                else:
+                    self._cached_centroids = new_c
+                c = self._cached_centroids
+            else:
+                rem = cur_len % self.block_size
+                tail_c = dispatch_compute_centroids(
+                    self._cached_k_idx[:, -rem:], block_size=self.block_size
+                )
+                if self._cached_centroids is not None:
+                    c = torch.cat([self._cached_centroids, tail_c], dim=1)
+                else:
+                    c = tail_c
         elif past_centroids is not None:
             c_curr = dispatch_compute_centroids(ki, block_size=self.block_size)
             c = torch.cat([past_centroids, c_curr], dim=1)
-        elif not self.training and l == 1 and self._cached_k_idx is not None and self._cached_k_idx.shape[0] == b:
-            self._cached_k_idx = torch.cat([self._cached_k_idx, ki.detach()], dim=1)
-            c = dispatch_compute_centroids(self._cached_k_idx, block_size=self.block_size)
-        elif not self.training and l == 1 and self._cached_centroids is not None and self._cached_centroids.shape[0] == b:
-            c_curr = dispatch_compute_centroids(ki, block_size=self.block_size)
-            c = torch.cat([self._cached_centroids, c_curr], dim=1)
         else:
             c = dispatch_compute_centroids(ki, block_size=self.block_size)
             if not self.training and l > 1:
                 self._cached_k_idx = ki.detach()
-                self._cached_centroids = c.detach()
+                num_comp = l // self.block_size
+                if num_comp > 0:
+                    self._cached_centroids = c[:, :num_comp, :].detach()
+                else:
+                    self._cached_centroids = None
             else:
                 self._cached_k_idx = None
                 self._cached_centroids = None

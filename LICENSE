@@ -1,21 +1,61 @@
-MIT License
+MABA OPEN ARCHITECTURE LICENSE (MOAL-1.0)
 
-Copyright (c) 2026 Maba Architecture Authors
+Copyright (c) 2026 Andrew Thompson (Maba Architecture Creator & Authors).
+Repository / Source: https://github.com/ivan-dev35/123123 (and official Maba repositories)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person or organization obtaining 
+a copy of this software, architecture specifications, kernel implementations, weights, 
+and associated documentation files (the "Technology"), to deal in the Technology without 
+restriction, including without limitation the rights to use, copy, modify, merge, 
+publish, distribute, sublicense, train, fine-tune, benchmark, host, deploy, and/or 
+sell copies or services based on the Technology, subject to the following STRICT CONDITIONS:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+========================================================================================
+1. MANDATORY ATTRIBUTION (ОБЯЗАТЕЛЬНОЕ УКАЗАНИЕ АВТОРСТВА)
+========================================================================================
+Any model, derivative architecture, fine-tune, academic paper, technical report, 
+software library, commercial API, or hosted service that incorporates, copies, adapts, 
+or derives from this Technology MUST prominently display clear attribution to the 
+original Creator ("Created based on Maba Architecture by Andrew Thompson") 
+and include a direct, accessible hyperlink to the official Maba Architecture repository.
+This notice must be clearly visible in:
+  a) Model cards and system documentation;
+  b) Source code repositories and dependency acknowledgments;
+  c) Academic citations and technical whitepapers.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+========================================================================================
+2. TECHNOLOGY NAMING INTEGRITY & NON-RENAMING CLAUSE (ЗАПРЕТ НА ПРИСВОЕНИЕ И ПЕРЕИМЕНОВАНИЕ)
+========================================================================================
+No person, corporation, research entity, or third party has the right to rebrand, rename, 
+plagiarize, or claim original authorship over the core technologies and architectural 
+innovations introduced herein by copying or adapting the implementation under a 
+different proprietary name. 
+
+Specifically:
+  a) The overall architecture must retain the name "Maba" (e.g., "Maba-Sparse", 
+     "Maba v1.5", or explicitly "Maba-based / Derived from Maba");
+  b) The core architectural mechanisms and sub-technologies:
+       - DGDA (Dual-Gated Delta Attention),
+       - MABA-SA (Maba Sparse Attention / Three-Stream Superposition),
+       - DG-Indexer (Centroid Block-Sparse Indexer & Mean-Max Routing),
+       - HCA (Hierarchical Compressed Attention)
+     MUST retain their canonical names and conceptual attribution in technical descriptions, 
+     documentation, and published architectures. Rebranding these mechanisms under new 
+     labels without explicit attribution to Maba is strictly prohibited.
+
+========================================================================================
+3. OPEN USE AND COMMERCIAL FREEDOM
+========================================================================================
+Subject to full compliance with Sections 1 and 2 above, users are granted complete freedom 
+to utilize this Technology for commercial products, research, open-source models, and 
+large-scale training without payment of royalties or licensing fees.
+
+========================================================================================
+4. DISCLAIMER OF WARRANTY
+========================================================================================
+THE TECHNOLOGY IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR 
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE 
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
+OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE TECHNOLOGY OR THE USE OR OTHER 
+DEALINGS IN THE TECHNOLOGY.

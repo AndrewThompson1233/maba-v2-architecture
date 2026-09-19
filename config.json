@@ -27,7 +27,7 @@
   "inversion_method": "adaptive",
   "inversion_threshold": 0.5,
   "adaptive_tol": 7e-05,
-  "intermediate_size": 1728,
+  "intermediate_size": 1248,
   "rms_norm_eps": 1e-06,
   "residual_gate_bias": 2.0,
   "mtp_depth": 2,

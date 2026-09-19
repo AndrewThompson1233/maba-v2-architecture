@@ -166,7 +166,7 @@ def train(args: argparse.Namespace) -> None:
     for name, param in m.named_parameters():
         if not param.requires_grad:
             continue
-        if param.dim() < 2 or "norm" in name or "bias" in name or "gate" in name:
+        if param.dim() < 2 or "norm" in name or "bias" in name:
             nodecay_params.append(param)
         else:
             decay_params.append(param)
@@ -246,6 +246,20 @@ def train(args: argparse.Namespace) -> None:
         final_loss = f"{loss.item():.4f}" if loss is not None else "N/A"
         print(f"Final Step Loss: {final_loss}")
 
+    if main and getattr(args, "save_path", None):
+        os.makedirs(os.path.dirname(args.save_path) or ".", exist_ok=True)
+        raw_model = m.module if dist_flag else m
+        torch.save(
+            {
+                "model_state_dict": raw_model.state_dict(),
+                "config": getattr(raw_model, "config", None),
+                "steps": args.steps,
+                "final_loss": loss.item() if loss is not None else None,
+            },
+            args.save_path,
+        )
+        print(f"Model checkpoint saved successfully to {args.save_path}")
+
     cleanup_distributed(dist_flag)
 
 
@@ -264,9 +278,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log_interval", type=int, default=10)
     parser.add_argument("--dataset", type=str, default="synthetic", choices=["synthetic", "dialog"])
     parser.add_argument("--data_path", type=str, default=None)
+    parser.add_argument("--save_path", type=str, default="checkpoints/maba_dialog_checkpoint.pt")
     parser.add_argument("--fp16", action="store_true", help="Enable FP16 mixed precision training")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     train(parse_args())
+

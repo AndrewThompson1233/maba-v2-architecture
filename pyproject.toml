@@ -8,9 +8,9 @@ version = "0.1.0"
 description = "Maba v1.5 Experimental Architecture: Hybrid DGDA Recurrence + Dynamic Sparse Global Attention"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "MABA Open Architecture License (MOAL-1.0)" }
 authors = [
-    { name = "Maba Sparse Research Team" }
+    { name = "Andrew Thompson" }
 ]
 keywords = [
     "deep-learning",
