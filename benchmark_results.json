@@ -1,0 +1,178 @@
+{
+  "metadata": {
+    "device": "cuda:0",
+    "device_name": "Tesla T4",
+    "cuda_version": "12.8",
+    "torch_version": "2.10.0+cu128",
+    "batch_size": 1,
+    "maba_parameters": 101282319,
+    "dense_parameters": 103533184,
+    "timestamp": "2026-09-19T19:08:36Z"
+  },
+  "model_benchmarks": [
+    {
+      "context_length": 128,
+      "maba": {
+        "latency_ms": 49.71122466607388,
+        "throughput": 2574.8711857295157,
+        "peak_allocated_mb": 920.3759765625,
+        "peak_reserved_mb": 974.0,
+        "decode_ms_per_token": 36.76886766697862
+      },
+      "dense": {
+        "latency_ms": 16.564970999752404,
+        "throughput": 7727.149054587129,
+        "peak_allocated_mb": 863.41162109375,
+        "peak_reserved_mb": 922.0,
+        "decode_ms_per_token": 15.93566366682353
+      },
+      "speedup": 0.33322395718521497
+    },
+    {
+      "context_length": 256,
+      "maba": {
+        "latency_ms": 80.55316666711103,
+        "throughput": 3178.0252793528225,
+        "peak_allocated_mb": 1086.61962890625,
+        "peak_reserved_mb": 1140.0,
+        "decode_ms_per_token": 36.4759803336104
+      },
+      "dense": {
+        "latency_ms": 18.09589666663669,
+        "throughput": 14146.853550063968,
+        "peak_allocated_mb": 895.8837890625,
+        "peak_reserved_mb": 956.0,
+        "decode_ms_per_token": 17.59036766695014
+      },
+      "speedup": 0.22464537913721827
+    },
+    {
+      "context_length": 512,
+      "maba": {
+        "latency_ms": 134.02439066643032,
+        "throughput": 3820.200169939985,
+        "peak_allocated_mb": 1342.63427734375,
+        "peak_reserved_mb": 1540.0,
+        "decode_ms_per_token": 37.01569566692342
+      },
+      "dense": {
+        "latency_ms": 38.52136366610163,
+        "throughput": 13291.325936380448,
+        "peak_allocated_mb": 964.16796875,
+        "peak_reserved_mb": 1014.0,
+        "decode_ms_per_token": 15.141440000055203
+      },
+      "speedup": 0.2874205469210183
+    },
+    {
+      "context_length": 1024,
+      "maba": {
+        "latency_ms": 414.1195353331568,
+        "throughput": 2472.7159977521897,
+        "peak_allocated_mb": 1845.89697265625,
+        "peak_reserved_mb": 2014.0,
+        "decode_ms_per_token": 40.150419000686576
+      },
+      "dense": {
+        "latency_ms": 80.26152466603283,
+        "throughput": 12758.292398018239,
+        "peak_allocated_mb": 1090.88037109375,
+        "peak_reserved_mb": 1202.0,
+        "decode_ms_per_token": 15.750743999888073
+      },
+      "speedup": 0.19381245707586067
+    },
+    {
+      "context_length": 2048,
+      "maba": {
+        "latency_ms": 1474.721829332945,
+        "throughput": 1388.7364784763265,
+        "peak_allocated_mb": 2859.19873046875,
+        "peak_reserved_mb": 3542.0,
+        "decode_ms_per_token": 37.28137966694097
+      },
+      "dense": {
+        "latency_ms": 172.96642699996787,
+        "throughput": 11840.448088809631,
+        "peak_allocated_mb": 1350.494140625,
+        "peak_reserved_mb": 1612.0,
+        "decode_ms_per_token": 17.17245933347537
+      },
+      "speedup": 0.11728749351883201
+    },
+    {
+      "context_length": 4096,
+      "maba": {
+        "latency_ms": 3230.191407666401,
+        "throughput": 1268.0363121141133,
+        "peak_allocated_mb": 2946.66064453125,
+        "peak_reserved_mb": 3546.0,
+        "decode_ms_per_token": 35.30276133399942
+      },
+      "dense": {
+        "latency_ms": 427.90093099999166,
+        "throughput": 9572.309156766196,
+        "peak_allocated_mb": 1818.1708984375,
+        "peak_reserved_mb": 2566.0,
+        "decode_ms_per_token": 15.792006333867903
+      },
+      "speedup": 0.13246921838267214
+    }
+  ],
+  "attention_benchmarks": [
+    {
+      "context_length": 128,
+      "maba_latency_ms": 3.5059093333984492,
+      "maba_mem_mb": 980.1015625,
+      "dense_latency_ms": 0.4946203334839083,
+      "dense_mem_mb": 899.5830078125,
+      "speedup": 0.14108189529375212,
+      "mem_saved_pct": -8.950653134644625
+    },
+    {
+      "context_length": 256,
+      "maba_latency_ms": 5.590625333449377,
+      "maba_mem_mb": 1143.15478515625,
+      "dense_latency_ms": 0.49461066616155824,
+      "dense_mem_mb": 902.73974609375,
+      "speedup": 0.08847143864251532,
+      "mem_saved_pct": -26.63171086714651
+    },
+    {
+      "context_length": 512,
+      "maba_latency_ms": 15.425827667058911,
+      "maba_mem_mb": 1390.52294921875,
+      "dense_latency_ms": 1.0143493333695612,
+      "dense_mem_mb": 911.16259765625,
+      "speedup": 0.06575655810907663,
+      "mem_saved_pct": -52.60974855591538
+    },
+    {
+      "context_length": 1024,
+      "maba_latency_ms": 68.0452790002164,
+      "maba_mem_mb": 1883.11865234375,
+      "dense_latency_ms": 2.162629666903134,
+      "dense_mem_mb": 921.69482421875,
+      "speedup": 0.03178221470583222,
+      "mem_saved_pct": -104.31042931589913
+    },
+    {
+      "context_length": 2048,
+      "maba_latency_ms": 268.67826533331635,
+      "maba_mem_mb": 2870.38720703125,
+      "dense_latency_ms": 4.9225813333274955,
+      "dense_mem_mb": 946.94873046875,
+      "speedup": 0.01832147206704885,
+      "mem_saved_pct": -203.11960031990083
+    },
+    {
+      "context_length": 4096,
+      "maba_latency_ms": 571.3217749998876,
+      "maba_mem_mb": 2906.50732421875,
+      "dense_latency_ms": 13.213445333046062,
+      "dense_mem_mb": 997.45654296875,
+      "speedup": 0.023127851783784476,
+      "mem_saved_pct": -191.3918751355376
+    }
+  ]
+}

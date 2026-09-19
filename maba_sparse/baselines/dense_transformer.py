@@ -7,18 +7,57 @@ import torch.nn.functional as F
 from maba_sparse.model import FactorizedEmbeddings, MabaSparseOutput, RMSNorm, SwiGLUFFN
 
 
+def _apply_rotary_emb(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
+    d2 = x.shape[-1] // 2
+    x1, x2 = x[..., :d2], x[..., d2:]
+    rx = torch.cat((-x2, x1), dim=-1)
+    return (x * cos) + (rx * sin)
+
+
+class RotaryEmbedding(nn.Module):
+    def __init__(self, dim: int, max_seq_len: int = 4096, base: float = 10000.0) -> None:
+        super().__init__()
+        self.dim = dim
+        inv_freq = 1.0 / (base ** (torch.arange(0, dim, 2).float() / dim))
+        self.register_buffer("inv_freq", inv_freq, persistent=False)
+        t = torch.arange(max_seq_len, dtype=torch.float32)
+        freqs = torch.outer(t, self.inv_freq)
+        emb = torch.cat((freqs, freqs), dim=-1)
+        self.register_buffer("cos_cached", emb.cos()[None, None, :, :], persistent=False)
+        self.register_buffer("sin_cached", emb.sin()[None, None, :, :], persistent=False)
+
+    def forward(self, x: torch.Tensor, offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+        seq_len = x.shape[2]
+        cos = self.cos_cached[:, :, offset : offset + seq_len, :].to(dtype=x.dtype, device=x.device)
+        sin = self.sin_cached[:, :, offset : offset + seq_len, :].to(dtype=x.dtype, device=x.device)
+        return cos, sin
+
+
 class DenseAttention(nn.Module):
-    def __init__(self, dim: int = 640, n_heads: int = 10, d_head: int = 64) -> None:
+    def __init__(
+        self,
+        dim: int = 640,
+        n_heads: int = 10,
+        d_head: int = 64,
+        use_rope: bool = True,
+        max_seq_len: int = 4096,
+    ) -> None:
         super().__init__()
         self.dim = dim
         self.n_heads = n_heads
         self.d_head = d_head
         self.scale = 1.0 / math.sqrt(d_head)
+        self.use_rope = use_rope
 
         self.q_proj = nn.Linear(dim, n_heads * d_head, bias=False)
         self.k_proj = nn.Linear(dim, n_heads * d_head, bias=False)
         self.v_proj = nn.Linear(dim, n_heads * d_head, bias=False)
         self.o_proj = nn.Linear(n_heads * d_head, dim, bias=False)
+
+        if self.use_rope:
+            self.rope = RotaryEmbedding(d_head, max_seq_len=max_seq_len)
+        else:
+            self.rope = None
 
     def forward(
         self,
@@ -29,6 +68,13 @@ class DenseAttention(nn.Module):
         q = self.q_proj(x).view(b, l, self.n_heads, self.d_head).transpose(1, 2)
         k = self.k_proj(x).view(b, l, self.n_heads, self.d_head).transpose(1, 2)
         v = self.v_proj(x).view(b, l, self.n_heads, self.d_head).transpose(1, 2)
+
+        offset = kv_cache[0].shape[2] if kv_cache is not None else 0
+        if self.use_rope and self.rope is not None:
+            cos_q, sin_q = self.rope(q, offset=offset)
+            cos_k, sin_k = self.rope(k, offset=offset)
+            q = _apply_rotary_emb(q, cos_q, sin_q)
+            k = _apply_rotary_emb(k, cos_k, sin_k)
 
         if kv_cache is not None:
             pk, pv = kv_cache
@@ -58,10 +104,14 @@ class DenseTransformerBlock(nn.Module):
         intermediate_size: int = 1728,
         eps: float = 1e-6,
         residual_gate_bias: float = 2.0,
+        use_rope: bool = True,
+        max_seq_len: int = 4096,
     ) -> None:
         super().__init__()
         self.norm1 = RMSNorm(dim, eps=eps)
-        self.mixer = DenseAttention(dim, n_heads, d_head)
+        self.mixer = DenseAttention(
+            dim, n_heads, d_head, use_rope=use_rope, max_seq_len=max_seq_len
+        )
         self.res_gate1 = nn.Parameter(torch.full((dim,), residual_gate_bias))
 
         self.norm2 = RMSNorm(dim, eps=eps)
@@ -92,6 +142,8 @@ class DenseTransformerForCausalLM(nn.Module):
         intermediate_size: int = 1728,
         eps: float = 1e-6,
         residual_gate_bias: float = 2.0,
+        use_rope: bool = True,
+        max_seq_len: int = 4096,
     ) -> None:
         super().__init__()
         self.vocab_size = vocab_size
@@ -107,6 +159,8 @@ class DenseTransformerForCausalLM(nn.Module):
                 intermediate_size=intermediate_size,
                 eps=eps,
                 residual_gate_bias=residual_gate_bias,
+                use_rope=use_rope,
+                max_seq_len=max_seq_len,
             )
             for _ in range(n_layers)
         ])
