@@ -1,218 +1,218 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 640" width="100%" height="640">
   <defs>
-    <linearGradient id="mabaGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2563eb"/>
-      <stop offset="100%" stop-color="#93c5fd"/>
+    <linearGradient id="mabaGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
     </linearGradient>
-    <linearGradient id="qwenGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#ddd6fe"/>
+    <linearGradient id="qwenGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
-    <linearGradient id="museGrad" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="museGrad" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#0284c7"/>
-      <stop offset="100%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#38bdf8"/>
     </linearGradient>
-    <linearGradient id="gemmaGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#ea580c"/>
-      <stop offset="100%" stop-color="#fed7aa"/>
-    </linearGradient>
-    <linearGradient id="otherGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#64748b"/>
-      <stop offset="100%" stop-color="#cbd5e1"/>
+    <linearGradient id="gemmaGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#c2410c"/>
+      <stop offset="100%" stop-color="#f97316"/>
     </linearGradient>
   </defs>
 
   <rect width="1040" height="640" fill="#ffffff"/>
 
-  <!-- Top Metric Cards (Row 1, y=25) -->
+  <!-- Top Metric Cards (Row 1, y=20) -->
   <!-- Card 1: Core Parameter Ratio -->
-  <g transform="translate(35, 25)">
-    <rect width="220" height="215" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#111827">Core Parameter Ratio (%)</text>
-    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Computation Weights vs Vocab</text>
+  <g transform="translate(20, 20)">
+    <rect width="244" height="245" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Core Parameter Ratio (%)</text>
+    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Computation Weights vs Vocab</text>
     
-    <!-- Maba-1B -->
-    <text x="16" y="70" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb">Maba v2-1B</text>
-    <rect x="16" y="76" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="76" width="183.8" height="12" rx="3" fill="url(#mabaGrad)"/>
-    <text x="185" y="69" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb" text-anchor="end">97.8%</text>
+    <!-- Maba v2-1B -->
+    <text x="16" y="72" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">Maba v2-1B</text>
+    <rect x="16" y="78" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="78" width="207.3" height="12" rx="3" fill="url(#mabaGrad)"/>
+    <text x="212" y="71" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8" text-anchor="end">97.8%</text>
 
     <!-- Qwen3.5-0.8B -->
-    <text x="16" y="104" font-family="sans-serif" font-size="11" fill="#475569">Qwen3.5-0.8B</text>
-    <rect x="16" y="110" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="110" width="128.2" height="12" rx="3" fill="url(#qwenGrad)"/>
-    <text x="185" y="103" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">68.2%</text>
+    <text x="16" y="112" font-family="sans-serif" font-size="11" fill="#475569">Qwen3.5-0.8B</text>
+    <rect x="16" y="118" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="118" width="144.6" height="12" rx="3" fill="url(#qwenGrad)"/>
+    <text x="212" y="111" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">68.2%</text>
 
-    <!-- Maba-30B -->
-    <text x="16" y="138" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb">Maba v2-30B</text>
-    <rect x="16" y="144" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="144" width="187.3" height="12" rx="3" fill="url(#mabaGrad)"/>
-    <text x="185" y="137" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb" text-anchor="end">99.6%</text>
+    <!-- Maba v2-30B -->
+    <text x="16" y="152" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">Maba v2-30B</text>
+    <rect x="16" y="158" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="158" width="211.1" height="12" rx="3" fill="url(#mabaGrad)"/>
+    <text x="212" y="151" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8" text-anchor="end">99.6%</text>
 
     <!-- Gemma4-31B -->
-    <text x="16" y="172" font-family="sans-serif" font-size="11" fill="#475569">Gemma4-31B</text>
-    <rect x="16" y="178" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="178" width="166.1" height="12" rx="3" fill="url(#gemmaGrad)"/>
-    <text x="185" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">88.4%</text>
+    <text x="16" y="192" font-family="sans-serif" font-size="11" fill="#475569">Gemma4-31B</text>
+    <rect x="16" y="198" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="198" width="187.4" height="12" rx="3" fill="url(#gemmaGrad)"/>
+    <text x="212" y="191" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">88.4%</text>
   </g>
 
   <!-- Card 2: Vocab Parameter Tax -->
-  <g transform="translate(285, 25)">
-    <rect width="220" height="215" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#111827">Vocab Parameter Tax (%)</text>
-    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Overhead from Large Vocabularies</text>
+  <g transform="translate(272, 20)">
+    <rect width="244" height="245" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Vocab Parameter Tax (%)</text>
+    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Overhead from Large Vocabularies</text>
     
-    <!-- Maba-1B -->
-    <text x="16" y="70" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">Maba v2-1B (Factorized)</text>
-    <rect x="16" y="76" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="76" width="10.3" height="12" rx="3" fill="#16a34a"/>
-    <text x="185" y="69" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a" text-anchor="end">1.74%</text>
+    <!-- Maba v2-1B -->
+    <text x="16" y="72" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">Maba v2-1B (Factorized)</text>
+    <rect x="16" y="78" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="78" width="11.6" height="12" rx="3" fill="#16a34a"/>
+    <text x="212" y="71" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a" text-anchor="end">1.74%</text>
 
     <!-- Qwen3.5-0.8B -->
-    <text x="16" y="104" font-family="sans-serif" font-size="11" fill="#dc2626">Qwen3.5-0.8B (Direct 248k)</text>
-    <rect x="16" y="110" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="110" width="188.0" height="12" rx="3" fill="#ef4444"/>
-    <text x="185" y="103" font-family="sans-serif" font-size="11" font-weight="700" fill="#dc2626" text-anchor="end">31.8%</text>
+    <text x="16" y="112" font-family="sans-serif" font-size="11" fill="#dc2626">Qwen3.5-0.8B (Direct 248k)</text>
+    <rect x="16" y="118" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="118" width="145.2" height="12" rx="3" fill="#ef4444"/>
+    <text x="212" y="111" font-family="sans-serif" font-size="11" font-weight="700" fill="#dc2626" text-anchor="end">31.8%</text>
 
-    <!-- Maba-30B -->
-    <text x="16" y="138" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">Maba v2-30B (Factorized)</text>
-    <rect x="16" y="144" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="144" width="4.0" height="12" rx="3" fill="#16a34a"/>
-    <text x="185" y="137" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a" text-anchor="end">0.20%</text>
+    <!-- Maba v2-30B -->
+    <text x="16" y="152" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">Maba v2-30B (Factorized)</text>
+    <rect x="16" y="158" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="158" width="4.0" height="12" rx="3" fill="#16a34a"/>
+    <text x="212" y="151" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a" text-anchor="end">0.20%</text>
 
     <!-- Gemma4-31B -->
-    <text x="16" y="172" font-family="sans-serif" font-size="11" fill="#dc2626">Gemma4-31B (Direct 256k)</text>
-    <rect x="16" y="178" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="178" width="68.9" height="12" rx="3" fill="#ef4444"/>
-    <text x="185" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#dc2626" text-anchor="end">11.6%</text>
+    <text x="16" y="192" font-family="sans-serif" font-size="11" fill="#dc2626">Gemma4-31B (Direct 256k)</text>
+    <rect x="16" y="198" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="198" width="68.5" height="12" rx="3" fill="#ef4444"/>
+    <text x="212" y="191" font-family="sans-serif" font-size="11" font-weight="600" fill="#dc2626" text-anchor="end">11.6%</text>
   </g>
 
   <!-- Card 3: KV Cache Footprint (131k) -->
-  <g transform="translate(535, 25)">
-    <rect width="220" height="215" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#111827">KV Cache Footprint (131k)</text>
-    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">FP16 VRAM (Lower is Better)</text>
+  <g transform="translate(524, 20)">
+    <rect width="244" height="245" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#0f172a">KV Cache Footprint (131k)</text>
+    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Memory per Sequence (FP16)</text>
     
-    <!-- Maba-7B -->
-    <text x="16" y="70" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb">Maba v2-7B</text>
-    <rect x="16" y="76" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="76" width="11.2" height="12" rx="3" fill="url(#mabaGrad)"/>
-    <text x="185" y="69" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb" text-anchor="end">1.15 GB</text>
+    <!-- Maba v2-7B -->
+    <text x="16" y="72" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">Maba v2-7B</text>
+    <rect x="16" y="78" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="78" width="40.8" height="12" rx="3" fill="url(#mabaGrad)"/>
+    <text x="212" y="71" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8" text-anchor="end">1.15 GB</text>
 
     <!-- Qwen3.5-9B -->
-    <text x="16" y="104" font-family="sans-serif" font-size="11" fill="#475569">Qwen3.5-9B</text>
-    <rect x="16" y="110" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="110" width="40.0" height="12" rx="3" fill="url(#qwenGrad)"/>
-    <text x="185" y="103" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">4.10 GB</text>
+    <text x="16" y="112" font-family="sans-serif" font-size="11" fill="#475569">Qwen3.5-9B</text>
+    <rect x="16" y="118" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="118" width="86.2" height="12" rx="3" fill="url(#qwenGrad)"/>
+    <text x="212" y="111" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">4.10 GB</text>
 
-    <!-- Maba-30B -->
-    <text x="16" y="138" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb">Maba v2-30B</text>
-    <rect x="16" y="144" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="144" width="17.1" height="12" rx="3" fill="url(#mabaGrad)"/>
-    <text x="185" y="137" font-family="sans-serif" font-size="11" font-weight="700" fill="#2563eb" text-anchor="end">1.75 GB</text>
+    <!-- Maba v2-30B -->
+    <text x="16" y="152" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">Maba v2-30B</text>
+    <rect x="16" y="158" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="158" width="55.4" height="12" rx="3" fill="url(#mabaGrad)"/>
+    <text x="212" y="151" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8" text-anchor="end">1.75 GB</text>
 
     <!-- Gemma4-31B -->
-    <text x="16" y="172" font-family="sans-serif" font-size="11" fill="#475569">Gemma4-31B</text>
-    <rect x="16" y="178" width="188" height="12" rx="3" fill="#e2e8f0"/>
-    <rect x="16" y="178" width="188.0" height="12" rx="3" fill="url(#gemmaGrad)"/>
-    <text x="185" y="171" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">28.31 GB</text>
+    <text x="16" y="192" font-family="sans-serif" font-size="11" fill="#475569">Gemma4-31B</text>
+    <rect x="16" y="198" width="212" height="12" rx="3" fill="#e2e8f0"/>
+    <rect x="16" y="198" width="212.0" height="12" rx="3" fill="url(#gemmaGrad)"/>
+    <text x="212" y="191" font-family="sans-serif" font-size="11" font-weight="600" fill="#475569" text-anchor="end">28.31 GB</text>
   </g>
 
-  <!-- Card 4: Architecture Layout -->
-  <g transform="translate(785, 25)">
-    <rect width="220" height="215" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#111827">Maba Macro-Stack</text>
-    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">Hybrid Sub-Quadratic Engine</text>
-    
-    <!-- Recurrence Engine -->
-    <rect x="16" y="62" width="188" height="42" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
-    <text x="26" y="80" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">75% DGDA Recurrence</text>
-    <text x="26" y="95" font-family="sans-serif" font-size="10" fill="#3b82f6">Decoupled Key/Value Gates + O(1)</text>
+  <!-- Card 4: Macro Stack Structure -->
+  <g transform="translate(776, 20)">
+    <rect width="244" height="245" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="16" y="24" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="700" fill="#0f172a">Maba Macro-Stack</text>
+    <text x="16" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif" font-size="10.5" fill="#64748b">3:1 Cyclic Recurrence-Attention</text>
 
-    <!-- Sparse Attention -->
-    <rect x="16" y="112" width="188" height="42" rx="6" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1"/>
+    <!-- Recurrence Slice -->
+    <rect x="16" y="58" width="212" height="44" rx="6" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+    <text x="26" y="78" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">75% DGDA Recurrence</text>
+    <text x="26" y="93" font-family="sans-serif" font-size="10" fill="#3b82f6">Constant State | O(1) Decoding</text>
+
+    <!-- Attention Slice -->
+    <rect x="16" y="110" width="212" height="44" rx="6" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1"/>
     <text x="26" y="130" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#6d28d9">25% MABA-SA Attention</text>
     <text x="26" y="145" font-family="sans-serif" font-size="10" fill="#8b5cf6">MLA + Top-32 Sparse + HCA</text>
 
-    <!-- Drafter -->
-    <rect x="16" y="162" width="188" height="34" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/>
-    <text x="26" y="183" font-family="sans-serif" font-size="11" font-weight="700" fill="#047857">Speculative Drafter: MTP (k=2)</text>
+    <!-- Speculative Drafter Slice -->
+    <rect x="16" y="162" width="212" height="44" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1"/>
+    <text x="26" y="182" font-family="sans-serif" font-size="11" font-weight="700" fill="#047857">Speculative Drafter: MTP (k=2)</text>
+    <text x="26" y="197" font-family="sans-serif" font-size="10" fill="#059669">Multi-Token Parallel Verification</text>
   </g>
 
-  <!-- Bottom Comparison Table (y=265) -->
-  <g transform="translate(35, 265)">
-    <rect width="970" height="345" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-    
-    <!-- Table Header -->
-    <rect x="0" y="0" width="970" height="38" rx="8" fill="#f1f5f9"/>
-    <text x="20" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">Model Specification</text>
-    <text x="210" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">Total / Core Weights</text>
-    <text x="380" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">Macro Topology</text>
-    <text x="540" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">Vocab Tax</text>
-    <text x="680" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">KV Cache (131k)</text>
-    <text x="830" y="24" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#334155">Active Memory (1M)</text>
-    <line x1="0" y1="38" x2="970" y2="38" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- Bottom Detailed Model Specification Table -->
+  <g transform="translate(20, 280)">
+    <rect width="1000" height="340" rx="8" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
 
-    <!-- Row 1: Maba-30B -->
-    <text x="20" y="68" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-30B (2026)</text>
-    <text x="210" y="68" font-family="sans-serif" font-size="11.5" fill="#0f172a">29.08B / 28.97B (99.6%)</text>
-    <text x="380" y="68" font-family="sans-serif" font-size="11.5" fill="#0f172a">3:1 (39 DGDA + 13 SA)</text>
-    <text x="540" y="68" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#16a34a">0.20% (Rank 768)</text>
-    <text x="680" y="68" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">1.75 GB</text>
-    <text x="830" y="68" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#16a34a">3.5 MB (Top-64)</text>
-    <line x1="20" y1="81" x2="950" y2="81" stroke="#e2e8f0" stroke-width="1"/>
+    <!-- Header Row -->
+    <rect x="0" y="0" width="1000" height="38" rx="8" fill="#f8fafc"/>
+    <line x1="0" y1="38" x2="1000" y2="38" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="20" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">Model Specification</text>
+    <text x="230" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">Total / Core Weights</text>
+    <text x="400" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">Macro Topology</text>
+    <text x="570" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">Vocab Tax</text>
+    <text x="720" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">KV Cache (131k)</text>
+    <text x="870" y="24" font-family="sans-serif" font-size="11" font-weight="700" fill="#334155">Active Memory (1M)</text>
+
+    <!-- Row 1: Maba v2-30B -->
+    <rect x="0" y="38" width="1000" height="42" fill="#f0fdf4" fill-opacity="0.4"/>
+    <line x1="0" y1="80" x2="1000" y2="80" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="20" y="64" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-30B (2026)</text>
+    <text x="230" y="64" font-family="sans-serif" font-size="11" fill="#0f172a">29.08B / 28.97B (99.6%)</text>
+    <text x="400" y="64" font-family="sans-serif" font-size="11" fill="#0f172a">3:1 (39 DGDA + 13 SA)</text>
+    <text x="570" y="64" font-family="sans-serif" font-size="11" font-weight="600" fill="#16a34a">0.20% (Rank 768)</text>
+    <text x="720" y="64" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">1.75 GB</text>
+    <text x="870" y="64" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">3.5 MB (Top-64)</text>
 
     <!-- Row 2: Muse-Glimmer-30B -->
-    <text x="20" y="103" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Muse-Glimmer-30B (Meta 2026)</text>
-    <text x="210" y="103" font-family="sans-serif" font-size="11.5" fill="#475569">29.60B / 26.90B (90.9%)</text>
-    <text x="380" y="103" font-family="sans-serif" font-size="11.5" fill="#475569">3:1 (39 Local 2k + 13 Global)</text>
-    <text x="540" y="103" font-family="sans-serif" font-size="11.5" fill="#dc2626">9.12% (Untied 202k)</text>
-    <text x="680" y="103" font-family="sans-serif" font-size="11.5" fill="#475569">4.50 GB</text>
-    <text x="830" y="103" font-family="sans-serif" font-size="11.5" fill="#dc2626">34.40 GB (Dense)</text>
-    <line x1="20" y1="116" x2="950" y2="116" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="122" x2="1000" y2="122" stroke="#f1f5f9" stroke-width="1"/>
+    <text x="20" y="106" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Muse-Glimmer-30B (Meta 2026)</text>
+    <text x="230" y="106" font-family="sans-serif" font-size="11" fill="#475569">29.60B / 26.90B (90.9%)</text>
+    <text x="400" y="106" font-family="sans-serif" font-size="11" fill="#475569">3:1 (39 Local 2k + 13 Global)</text>
+    <text x="570" y="106" font-family="sans-serif" font-size="11" fill="#dc2626">9.12% (Untied 202k)</text>
+    <text x="720" y="106" font-family="sans-serif" font-size="11" fill="#475569">4.50 GB</text>
+    <text x="870" y="106" font-family="sans-serif" font-size="11" fill="#dc2626">34.40 GB (Dense)</text>
 
     <!-- Row 3: Gemma4-31B -->
-    <text x="20" y="138" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Gemma4-31B (Google 2026)</text>
-    <text x="210" y="138" font-family="sans-serif" font-size="11.5" fill="#475569">30.70B / 27.12B (88.4%)</text>
-    <text x="380" y="138" font-family="sans-serif" font-size="11.5" fill="#475569">100% Full Quadratic Attention</text>
-    <text x="540" y="138" font-family="sans-serif" font-size="11.5" fill="#dc2626">11.65% (Direct 256k)</text>
-    <text x="680" y="138" font-family="sans-serif" font-size="11.5" fill="#475569">28.31 GB</text>
-    <text x="830" y="138" font-family="sans-serif" font-size="11.5" fill="#dc2626">226.50 GB (Dense)</text>
-    <line x1="20" y1="151" x2="950" y2="151" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="164" x2="1000" y2="164" stroke="#f1f5f9" stroke-width="1"/>
+    <text x="20" y="148" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Gemma4-31B (Google 2026)</text>
+    <text x="230" y="148" font-family="sans-serif" font-size="11" fill="#475569">30.70B / 27.12B (88.4%)</text>
+    <text x="400" y="148" font-family="sans-serif" font-size="11" fill="#475569">100% Full Quadratic Attention</text>
+    <text x="570" y="148" font-family="sans-serif" font-size="11" fill="#dc2626">11.65% (Direct 256k)</text>
+    <text x="720" y="148" font-family="sans-serif" font-size="11" fill="#475569">28.31 GB</text>
+    <text x="870" y="148" font-family="sans-serif" font-size="11" fill="#dc2626">226.50 GB (Dense)</text>
 
-    <!-- Row 4: Maba-7B -->
-    <text x="20" y="173" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-7B (2026)</text>
-    <text x="210" y="173" font-family="sans-serif" font-size="11.5" fill="#0f172a">7.14B / 7.08B (99.2%)</text>
-    <text x="380" y="173" font-family="sans-serif" font-size="11.5" fill="#0f172a">3:1 (27 DGDA + 9 SA)</text>
-    <text x="540" y="173" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#16a34a">0.52% (Rank 512)</text>
-    <text x="680" y="173" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">1.15 GB</text>
-    <text x="830" y="173" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#16a34a">2.5 MB (Top-48)</text>
-    <line x1="20" y1="186" x2="950" y2="186" stroke="#e2e8f0" stroke-width="1"/>
+    <!-- Row 4: Maba v2-7B -->
+    <rect x="0" y="164" width="1000" height="42" fill="#f0fdf4" fill-opacity="0.4"/>
+    <line x1="0" y1="206" x2="1000" y2="206" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="20" y="190" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-7B (2026)</text>
+    <text x="230" y="190" font-family="sans-serif" font-size="11" fill="#0f172a">7.14B / 7.08B (99.2%)</text>
+    <text x="400" y="190" font-family="sans-serif" font-size="11" fill="#0f172a">3:1 (27 DGDA + 9 SA)</text>
+    <text x="570" y="190" font-family="sans-serif" font-size="11" font-weight="600" fill="#16a34a">0.52% (Rank 512)</text>
+    <text x="720" y="190" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">1.15 GB</text>
+    <text x="870" y="190" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">2.5 MB (Top-48)</text>
 
     <!-- Row 5: Qwen3.5-9B -->
-    <text x="20" y="208" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Qwen3.5-9B (Alibaba 2026)</text>
-    <text x="210" y="208" font-family="sans-serif" font-size="11.5" fill="#475569">8.80B / 7.78B (88.4%)</text>
-    <text x="380" y="208" font-family="sans-serif" font-size="11.5" fill="#475569">3:1 (24 GDN + 8 GQA)</text>
-    <text x="540" y="208" font-family="sans-serif" font-size="11.5" fill="#dc2626">11.56% (Direct 248k)</text>
-    <text x="680" y="208" font-family="sans-serif" font-size="11.5" fill="#475569">4.10 GB</text>
-    <text x="830" y="208" font-family="sans-serif" font-size="11.5" fill="#dc2626">32.80 GB (Dense)</text>
-    <line x1="20" y1="221" x2="950" y2="221" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="0" y1="248" x2="1000" y2="248" stroke="#f1f5f9" stroke-width="1"/>
+    <text x="20" y="232" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Qwen3.5-9B (Alibaba 2026)</text>
+    <text x="230" y="232" font-family="sans-serif" font-size="11" fill="#475569">8.80B / 7.78B (88.4%)</text>
+    <text x="400" y="232" font-family="sans-serif" font-size="11" fill="#475569">3:1 (24 GDN + 8 GQA)</text>
+    <text x="570" y="232" font-family="sans-serif" font-size="11" fill="#dc2626">11.56% (Direct 248k)</text>
+    <text x="720" y="232" font-family="sans-serif" font-size="11" fill="#475569">4.10 GB</text>
+    <text x="870" y="232" font-family="sans-serif" font-size="11" fill="#dc2626">32.80 GB (Dense)</text>
 
-    <!-- Row 6: Maba-1B -->
-    <text x="20" y="243" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-1B (2026)</text>
-    <text x="210" y="243" font-family="sans-serif" font-size="11.5" fill="#0f172a">1.01B / 0.98B (97.8%)</text>
-    <text x="380" y="243" font-family="sans-serif" font-size="11.5" fill="#0f172a">3:1 (15 DGDA + 5 SA)</text>
-    <text x="540" y="243" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#16a34a">1.74% (Rank 256)</text>
-    <text x="680" y="243" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">320.0 MB</text>
-    <text x="830" y="243" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#16a34a">1.3 MB (Top-32)</text>
-    <line x1="20" y1="256" x2="950" y2="256" stroke="#e2e8f0" stroke-width="1"/>
+    <!-- Row 6: Maba v2-1B -->
+    <rect x="0" y="248" width="1000" height="42" fill="#f0fdf4" fill-opacity="0.4"/>
+    <line x1="0" y1="290" x2="1000" y2="290" stroke="#e2e8f0" stroke-width="1"/>
+    <text x="20" y="274" font-family="sans-serif" font-size="11.5" font-weight="700" fill="#1d4ed8">Maba v2-1B (2026)</text>
+    <text x="230" y="274" font-family="sans-serif" font-size="11" fill="#0f172a">1.01B / 0.98B (97.8%)</text>
+    <text x="400" y="274" font-family="sans-serif" font-size="11" fill="#0f172a">3:1 (15 DGDA + 5 SA)</text>
+    <text x="570" y="274" font-family="sans-serif" font-size="11" font-weight="600" fill="#16a34a">1.74% (Rank 256)</text>
+    <text x="720" y="274" font-family="sans-serif" font-size="11" font-weight="700" fill="#1d4ed8">320.0 MB</text>
+    <text x="870" y="274" font-family="sans-serif" font-size="11" font-weight="700" fill="#16a34a">1.3 MB (Top-32)</text>
 
     <!-- Row 7: Qwen3.5-0.8B -->
-    <text x="20" y="278" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Qwen3.5-0.8B (Alibaba 2026)</text>
-    <text x="210" y="278" font-family="sans-serif" font-size="11.5" fill="#475569">0.80B / 0.55B (68.2%)</text>
-    <text x="380" y="278" font-family="sans-serif" font-size="11.5" fill="#475569">3:1 (18 GDN + 6 GQA)</text>
-    <text x="540" y="278" font-family="sans-serif" font-size="11.5" fill="#dc2626">31.79% (Direct 248k)</text>
-    <text x="680" y="278" font-family="sans-serif" font-size="11.5" fill="#475569">768.0 MB</text>
-    <text x="830" y="278" font-family="sans-serif" font-size="11.5" fill="#dc2626">6.14 GB (Dense)</text>
+    <text x="20" y="316" font-family="sans-serif" font-size="11.5" font-weight="600" fill="#0f172a">Qwen3.5-0.8B (Alibaba 2026)</text>
+    <text x="230" y="316" font-family="sans-serif" font-size="11" fill="#475569">0.80B / 0.55B (68.2%)</text>
+    <text x="400" y="316" font-family="sans-serif" font-size="11" fill="#475569">3:1 (18 GDN + 6 GQA)</text>
+    <text x="570" y="316" font-family="sans-serif" font-size="11" fill="#dc2626">31.79% (Direct 248k)</text>
+    <text x="720" y="316" font-family="sans-serif" font-size="11" fill="#475569">768.0 MB</text>
+    <text x="870" y="316" font-family="sans-serif" font-size="11" fill="#dc2626">6.14 GB (Dense)</text>
   </g>
 </svg>
