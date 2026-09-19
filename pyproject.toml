@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "maba-v1.5-exp-architecture"
-version = "0.1.0"
-description = "Maba v1.5 Experimental Architecture: Hybrid DGDA Recurrence + Dynamic Sparse Global Attention"
+name = "maba"
+version = "1.0.0"
+description = "Maba: Linear Recurrence & Sparse Attention Hybrid Architecture"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MABA Open Architecture License (MOAL-1.0)" }
