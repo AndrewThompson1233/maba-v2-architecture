@@ -495,7 +495,7 @@ class TestBoundaryAndRemainderStress:
         assert diff_state < 1e-5, f"L=1 prefill vs step state diff: {diff_state:.6e}"
 
 
-class TestAdversarialAutogradGradients:
+class TestCPUAutogradGradients:
 
     @pytest.mark.parametrize("alpha_val", [0.0, 1.0])
     def test_backward_pass_extreme_decay(self, alpha_val: float):

@@ -299,7 +299,7 @@ class TestTritonDGDAAutogradGradients:
 
 
 
-class TestTritonDGDAAdversarialRegimes:
+class TestTritonDGDABoundaryRegimes:
 
     def test_extreme_decay_instant_forgetting(self):
         q, k, v, _, b, w, s0 = _make_tensors(L=32, s0=True)
