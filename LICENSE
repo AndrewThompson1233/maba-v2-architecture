@@ -1,7 +1,7 @@
 MABA OPEN ARCHITECTURE LICENSE (MOAL-1.0)
 
-Copyright (c) 2026 Andrew Thompson (Maba Architecture Creator & Authors).
-Repository / Source: https://github.com/ivan-dev35/123123 (and official Maba repositories)
+Copyright (c) 2026 Andrew Thompson (Maba v2 Architecture Creator & Authors).
+Repository / Source: https://github.com/AndrewThompson1233/maba-v2-architecture
 
 Permission is hereby granted, free of charge, to any person or organization obtaining 
 a copy of this software, architecture specifications, kernel implementations, weights, 
@@ -32,8 +32,8 @@ innovations introduced herein by copying or adapting the implementation under a
 different proprietary name. 
 
 Specifically:
-  a) The overall architecture must retain the name "Maba" (e.g., "Maba-Sparse", 
-     "Maba v1.5", or explicitly "Maba-based / Derived from Maba");
+  a) The overall architecture must retain the name "Maba" (e.g., "Maba v2", 
+     "maba-v2-architecture", or explicitly "Maba-based / Derived from Maba");
   b) The core architectural mechanisms and sub-technologies:
        - DGDA (Dual-Gated Delta Attention),
        - MABA-SA (Maba Sparse Attention / Three-Stream Superposition),

@@ -1,4 +1,4 @@
-# Maba Official Hardware & Architectural Benchmark Report
+# Maba v2 Architecture Official Hardware & Architectural Benchmark Report
 
 - **Hardware Platform**: `Tesla T4` (`cuda:0`)
 - **PyTorch / CUDA**: `PyTorch 2.10.0+cu128` / `CUDA 12.8`
