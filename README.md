@@ -81,24 +81,9 @@ Traditional dense transformers suffer from $O(L^2)$ prefill memory and $O(L)$ li
 
 ---
 
-## Context Scaling & Memory Footprint
+## Scaling & Resource Specifications
 
-<p align="center">
-  <img src="assets/scaling_comparison.svg" width="100%" alt="Scaling Comparison: Latency &amp; Memory vs Context Length"/>
-</p>
-
-### KV-Cache Allocation Across Context Lengths (FP16 Megabytes)
-
-| Context Length | Dense MHA (MB) | MiniCPM-5 (MB) | Qwen Flash-Next (MB) | Maba (MB) | Maba Memory Advantage |
-| :---: | :---: | :---: | :---: | :---: | :---: |
-| **1,024** | 50.00 | 25.00 | 5.00 | **3.60** | **13.9x vs Dense** (6.9x vs MiniCPM-5) |
-| **16,384** | 800.00 | 400.00 | 80.00 | **22.50** | **35.6x vs Dense** (17.8x vs MiniCPM-5) |
-| **65,536** | 3,200.00 | 1,600.00 | 320.00 | **82.97** | **38.6x vs Dense** (19.3x vs MiniCPM-5) |
-| **131,072** | 6,400.00 | 3,200.00 | 640.00 | **163.59** | **39.1x vs Dense** (19.6x vs MiniCPM-5) |
-| **262,144** | 12,800.00 | 6,400.00 | 1,280.00 | **324.84** | **39.4x vs Dense** (19.7x vs MiniCPM-5) |
-| **1,000,000** | 48,828.12 | 24,414.06 | 4,882.81 | **1,232.58** | **39.6x vs Dense** (19.8x vs MiniCPM-5) |
-
-Detailed analytical equations, parameter budgets across scales (100M to 30B), and empirical latency invariance are documented in [SCALING.md](SCALING.md).
+All parameter scaling laws, model tiers (100M to 30B), analytical KV-cache memory formulations, and empirical context scaling comparisons are documented in [SCALING.md](SCALING.md).
 
 ---
 

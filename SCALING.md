@@ -16,8 +16,8 @@ Maba balances constant-state linear recurrence and high-capacity associative mem
 
 ### Model Parameter Specifications (100M to 30B)
 
-| Model Tier | Total Params | Core Params | Layers (DGDA : SA) | Hidden Dim ($d$) | Heads ($H$) | Head Dim ($d_h$) | Latent Dim ($d_c$) | Vocab Size | Embed Dim ($d_{emb}$) | Vocab Tax (%) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Model Tier | Total Params | Core Params | Layers (DGDA : SA) | Hidden Dim ($d$) | Heads ($H$) | Head Dim ($d_h$) | Latent Dim ($d_c$) | Vocab Size | Embed Dim ($d_{\text{emb}}$) | Vocab Tax (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Maba v2-100M** (Ref) | 101.3M | 96.4M | 20 (15 : 5) | 640 | 10 | 64 | 128 | 32,768 | 128 | 4.8% |
 | **Maba v2-1B** | 1.01B | 0.98B | 24 (18 : 6) | 2,048 | 16 | 128 | 256 | 65,536 | 256 | 1.74% |
 | **Maba v2-3B** | 3.12B | 3.06B | 32 (24 : 8) | 3,072 | 24 | 128 | 384 | 65,536 | 384 | 0.98% |
@@ -26,29 +26,53 @@ Maba balances constant-state linear recurrence and high-capacity associative mem
 
 ### Factorized Embedding Allocation
 
-Standard autoregressive language models direct 15% to 35% of their total parameter budget to token embeddings when using vocabularies $\ge 128\text{k}$. For example, a 256k vocabulary with $d=4096$ requires over 1 billion parameters purely for embedding tables.
+Standard autoregressive language models allocate 15% to 35% of total parameters to token embeddings when using vocabularies $\ge 128\text{k}$. For example, a 256k vocabulary with $d=4096$ requires over 1 billion parameters purely for embedding tables.
 
 Maba eliminates this overhead via two-stage factorized linear projection:
-$$\text{Embedding}(x) = W_{\text{up}} \left( E[x] \right)$$
-where $E \in \mathbb{R}^{V \times d_{emb}}$ and $W_{\text{up}} \in \mathbb{R}^{d_{emb} \times d}$. This compresses the vocabulary parameter tax to **<1.8%** across all scales, reserving over **98% of parameters** for core transformer math and reasoning layers.
+
+$$
+\text{Embedding}(x) = W_{\text{up}} \left( E[x] \right)
+$$
+
+where:
+
+$$
+E \in \mathbb{R}^{V \times d_{\text{emb}}}, \quad W_{\text{up}} \in \mathbb{R}^{d_{\text{emb}} \times d}
+$$
+
+This compresses the vocabulary parameter tax to **<1.8%** across all scales, reserving over **98% of parameters** for core transformer math and reasoning layers.
 
 ---
 
 ## 2. KV-Cache Scaling & Analytical Memory Model
 
-### Mathematical Formulation
+### Mathematical Memory Formulation
 
-Given sequence length $L$, model hidden dimension $d$, number of layers $N$, number of attention layers $N_{\text{SA}}$, latent dimension $d_c$, block size $B=64$, and index dimension $d_{\text{idx}}=64$:
+Given sequence length $L$, model hidden dimension $d$, total layers $N$, attention layers $N_{\text{SA}}$, latent dimension $d_c$, block size $B=64$, and index dimension $d_{\text{idx}}=64$:
 
-1. **Dense Multi-Head Attention (FP16)**:
-   $$\text{Memory}_{\text{Dense}}(L) = 2 \cdot L \cdot d \cdot N \cdot 2 \text{ bytes}$$
+#### 1. Dense Multi-Head Attention (FP16)
 
-2. **MiniCPM-5 (Dense GQA, 4:1 query-to-key ratio)**:
-   $$\text{Memory}_{\text{GQA}}(L) = 2 \cdot L \cdot \frac{d}{4} \cdot N \cdot 2 \text{ bytes} = \frac{1}{2} \text{Memory}_{\text{Dense}}(L)$$
+$$
+\text{Memory}_{\text{Dense}}(L) = 4 \cdot L \cdot d \cdot N \quad \text{(bytes)}
+$$
 
-3. **Maba v2 MLA + Centroid Cache**:
-   $$\text{Memory}_{\text{Maba}}(L) = N_{\text{SA}} \cdot \left[ L \cdot d_c + \left\lceil \frac{L}{B} \right\rceil \cdot d_{\text{idx}} \right] \cdot 2 \text{ bytes} + N_{\text{DGDA}} \cdot S_{\text{state}}$$
-   where $S_{\text{state}} = H \cdot d_k \cdot d_v \cdot 4 \text{ bytes}$ is the constant recurrent state allocated once at initialization.
+#### 2. Grouped-Query Attention (GQA, 4:1 Ratio)
+
+$$
+\text{Memory}_{\text{GQA}}(L) = L \cdot d \cdot N \quad \text{(bytes)}
+$$
+
+#### 3. Maba v2 Multi-Head Latent Attention + Centroid Index
+
+$$
+\text{Memory}_{\text{Maba}}(L) = 2 \cdot N_{\text{SA}} \cdot \left( L \cdot d_c + \left\lceil \frac{L}{B} \right\rceil \cdot d_{\text{idx}} \right) + N_{\text{DGDA}} \cdot S_{\text{state}} \quad \text{(bytes)}
+$$
+
+where the constant recurrent state is allocated once at model initialization:
+
+$$
+S_{\text{state}} = 4 \cdot H \cdot d_k \cdot d_v \quad \text{(bytes)}
+$$
 
 ### Empirical KV-Cache Footprint (101M Model Tier)
 
@@ -72,7 +96,12 @@ Measured memory consumption for FP16 key-value state across sequence lengths:
 In standard transformer models, generation latency degrades linearly ($O(L)$) as the token cache grows, because each new token must attend across the entire history.
 
 Maba achieves strictly bounded **$O(1)$ decode latency**:
-1. **DGDA Recurrence**: 75% of layers update their recurrent state in $O(1)$ FLOPs without attending to past tokens.
+1. **DGDA Recurrence**: 75% of layers update their recurrent state in $O(1)$ FLOPs without attending to past tokens:
+
+$$
+S_t = \alpha_t \odot S_{t-1} + \beta_t \odot (k_t \otimes v_t)
+$$
+
 2. **Bounded Attention Window**: The 5 MABA-SA layers evaluate attention strictly over:
    - 128 local window tokens + 4 initial sinks ($132 \text{ tokens}$).
    - Top-32 gathered centroid blocks ($32 \times 64 = 2,048 \text{ tokens}$).
