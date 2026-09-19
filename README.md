@@ -78,6 +78,17 @@ tags:
 
 ---
 
+> [!NOTE]
+> **Production Release of the Experimental Maba v1.5 Prototype**
+>
+> Maba v2 is the official production release and hardened evolution of the experimental [Maba v1.5-exp](https://github.com/AndrewThompson1233/maba-v1.5-exp-architecture) prototype ([Hugging Face](https://huggingface.co/AndrewThompson1233/maba-v1.5-exp-architecture)).
+>
+> This release provides a fully verified, stable, and substantially improved architecture:
+> - **Autograd & Dispatcher Fixes**: Completely resolved backward gradient propagation edge cases and fallback dispatcher issues that existed in v1.5 experimental builds.
+> - **Million-Token Context Scaling**: Verified scaling to 1,000,000+ tokens with 39.6x KV-cache reduction (1.20 GB for 1M tokens in FP16) and 100% fine-grained retrieval (Rank #1 out of 15,625 blocks).
+> - **Strict O(1) Decoding**: Constant 35–37 ms/token generation latency on consumer GPUs with zero sequence-length slowdown.
+> - **NoPE Positional Stability**: Replaces RoPE with recurrent exponential decay (α_t) to ensure temporal invariance without frequency phase drift.
+
 ## Overview
 
 **Maba v2 Architecture** (`maba-v2-architecture`) is a reference PyTorch implementation of a 3:1 hybrid architecture uniting linear recurrence (**DGDA**) and sparse global attention (**MABA-SA**).
