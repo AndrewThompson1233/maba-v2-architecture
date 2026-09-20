@@ -78,27 +78,16 @@ tags:
 
 ---
 
-> [!NOTE]
-> **Production Release of the Experimental Maba v1.5 Prototype**
->
-> Maba v2 is the official production release and hardened evolution of the experimental [Maba v1.5-exp](https://huggingface.co/AndrewThompson1233/maba-v1.5-exp-architecture) prototype ([GitHub](https://github.com/AndrewThompson1233/maba-v1.5-exp-architecture)).
->
-> This release provides a fully verified, stable, and substantially improved architecture:
-> - **Autograd & Dispatcher Fixes**: Completely resolved backward gradient propagation edge cases and fallback dispatcher issues that existed in v1.5 experimental builds.
-> - **Million-Token Context Scaling**: Verified scaling to 1,000,000+ tokens with 39.6x KV-cache reduction (1.20 GB for 1M tokens in FP16) and 100% fine-grained retrieval (Rank #1 out of 15,625 blocks).
-> - **Strict O(1) Decoding**: Constant 35–37 ms/token generation latency on consumer GPUs with zero sequence-length slowdown.
-> - **NoPE Positional Stability**: Replaces RoPE with recurrent exponential decay (α_t) to ensure temporal invariance without frequency phase drift.
-
 ## Overview
 
-**Maba v2 Architecture** (`maba-v2-architecture`) is a reference PyTorch implementation of a 3:1 hybrid architecture uniting linear recurrence (**DGDA**) and sparse global attention (**MABA-SA**).
+Reference PyTorch implementation of the 3:1 hybrid architecture uniting linear recurrence (DGDA) and sparse global attention (MABA-SA).
 
-Traditional dense transformers suffer from O(L²) prefill memory and O(L) linear decode slowdown. Pure linear recurrent models struggle with associative recall across distant context. Maba solves this dilemma by routing 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with anti-dilution centroid routing.
+The model routes 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with centroid routing.
 
-- **Strict O(1) Decode Latency**: 35–37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
-- **39.6x KV-Cache Compression**: 1.20 GB for 1M tokens in FP16 (vs 48.8 GB for dense attention).
-- **1,000,000 Token Fact Extraction**: Single-needle retrieval at Token #742,189 with Rank #1 out of 15,625 blocks and 100% fine-grained attention focus.
-- **NoPE Temporal Invariance**: Replaces RoPE with exponential recurrent decay (α_t) to prevent frequency phase distortion over long distances.
+- Decode latency: 35–37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
+- KV-cache footprint: 1.20 GB for 1M tokens in FP16 (compared to 48.8 GB for standard dense attention).
+- Retrieval: Single-needle retrieval at token #742,189 with Rank #1 out of 15,625 blocks.
+- Positional stability: Uses recurrent exponential decay (α_t) instead of RoPE to prevent phase distortion over long contexts.
 
 ---
 
@@ -121,7 +110,7 @@ Traditional dense transformers suffer from O(L²) prefill memory and O(L) linear
 
 All parameter scaling laws, model tiers (100M to 30B), analytical KV-cache memory formulations, and empirical context scaling comparisons are documented in [SCALING.md](SCALING.md).
 
-Full hardware benchmark results — including decode dynamics, multi-architecture NIAH comparison, and Triton kernel ablation — are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
+Full hardware benchmark results - including decode dynamics, multi-architecture NIAH comparison, and Triton kernel ablation - are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
 
 ---
 

@@ -2,8 +2,8 @@
 
 - **Hardware Platform**: `Tesla T4` (`cuda:0`)
 - **PyTorch / CUDA**: `PyTorch 2.10.0+cu128` / `CUDA 12.8`
-- **Maba Parameter Budget**: `101,282,319` parameters (101.28M) — 20 layers (15 DGDA : 5 MABA-SA)
-- **Dense Baseline Budget**: `101,438,464` parameters (101.44M) — 20 layers with RoPE
+- **Maba Parameter Budget**: `101,282,319` parameters (101.28M) - 20 layers (15 DGDA : 5 MABA-SA)
+- **Dense Baseline Budget**: `101,438,464` parameters (101.44M) - 20 layers with RoPE
 - **Batch Size**: `1`
 - **Timestamp**: `2026-09-19T19:08:36Z`
 
@@ -56,7 +56,7 @@ Standardized single-needle fact extraction at 1,000,000 tokens. Target placed at
 | Qwen3.8-Flash-Next | 262,144 (native) | #1 / 4,096 | 99.7% | 84 ms | YaRN extrapolation to 1M untested |
 | MiniCPM-5 | 131,072 | #1 / 2,048 | 98.2% | 210 ms | GQA, no sparse routing |
 | Dense Transformer | 64,000 (OOM beyond) | #1 / 1,000 | 99.9% | 340 ms | Full softmax, OOM at 65k+ |
-| Mamba-2 (Pure SSM) | 1,000,000 | #4 / 15,625 | 61.3% | 45 ms | No attention — state compression loses fine-grained facts |
+| Mamba-2 (Pure SSM) | 1,000,000 | #4 / 15,625 | 61.3% | 45 ms | No attention - state compression loses fine-grained facts |
 
 ### Centroid Anti-Dilution Mechanism
 
@@ -90,7 +90,7 @@ Maba's dispatcher (`maba_sparse/kernels/dispatcher.py`) auto-selects the fastest
 | CPU OpenMP | 412.00 | 11.7x slower |
 | PyTorch Reference | 580.00 | 16.4x slower |
 
-The Triton backend fuses all DGDA gating, convolution, and state update operations into a single kernel launch per layer, eliminating HBM round-trips. The CPU backend uses OpenMP thread parallelism with SIMD vectorization but cannot match GPU memory bandwidth. The PyTorch reference backend runs standard autograd operations with no fusion — usable for debugging and gradient verification only.
+The Triton backend fuses all DGDA gating, convolution, and state update operations into a single kernel launch per layer, eliminating HBM round-trips. The CPU backend uses OpenMP thread parallelism with SIMD vectorization but cannot match GPU memory bandwidth. The PyTorch reference backend runs standard autograd operations with no fusion - usable for debugging and gradient verification only.
 
 ---
 
