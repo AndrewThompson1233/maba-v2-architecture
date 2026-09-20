@@ -121,7 +121,7 @@ Traditional dense transformers suffer from O(L²) prefill memory and O(L) linear
 
 All parameter scaling laws, model tiers (100M to 30B), analytical KV-cache memory formulations, and empirical context scaling comparisons are documented in [SCALING.md](SCALING.md).
 
-Full hardware benchmark results — including decode dynamics, multi-architecture NIAH comparison, and Triton kernel ablation — are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
+Full hardware benchmark results - including decode dynamics, multi-architecture NIAH comparison, and Triton kernel ablation - are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
 
 ---
 
