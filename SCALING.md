@@ -30,11 +30,15 @@ Standard autoregressive language models allocate 15% to 35% of total parameters 
 
 Maba eliminates this overhead via two-stage factorized linear projection:
 
-$$ \text{Embedding}(x) = W_{\text{up}} \left( E[x] \right) $$
+$$
+\text{Embedding}(x) = W_{\text{up}} \left( E[x] \right)
+$$
 
 where:
 
-$$ E \in \mathbb{R}^{V \times d_{\text{emb}}}, \quad W_{\text{up}} \in \mathbb{R}^{d_{\text{emb}} \times d} $$
+$$
+E \in \mathbb{R}^{V \times d_{\text{emb}}}, \quad W_{\text{up}} \in \mathbb{R}^{d_{\text{emb}} \times d}
+$$
 
 This compresses the vocabulary parameter tax to **<1.8%** across all scales, reserving over **98% of parameters** for core transformer math and reasoning layers.
 
@@ -48,19 +52,27 @@ Given sequence length L, model hidden dimension d, total layers N, attention lay
 
 #### 1. Dense Multi-Head Attention (FP16)
 
-$$ \text{Memory}_{\text{Dense}}(L) = 4 \cdot L \cdot d \cdot N \quad \text{(bytes)} $$
+$$
+\text{Memory}_{\text{Dense}}(L) = 4 \cdot L \cdot d \cdot N \quad \text{(bytes)}
+$$
 
 #### 2. Grouped-Query Attention (GQA, 4:1 Ratio)
 
-$$ \text{Memory}_{\text{GQA}}(L) = L \cdot d \cdot N \quad \text{(bytes)} $$
+$$
+\text{Memory}_{\text{GQA}}(L) = L \cdot d \cdot N \quad \text{(bytes)}
+$$
 
 #### 3. Maba v2 Multi-Head Latent Attention + Centroid Index
 
-$$ \text{Memory}_{\text{Maba}}(L) = 2 \cdot N_{\text{SA}} \cdot \left( L \cdot d_c + \left\lceil \frac{L}{B} \right\rceil \cdot d_{\text{idx}} \right) + N_{\text{DGDA}} \cdot S_{\text{state}} \quad \text{(bytes)} $$
+$$
+\text{Memory}_{\text{Maba}}(L) = 2 \cdot N_{\text{SA}} \cdot \left( L \cdot d_c + \left\lceil \frac{L}{B} \right\rceil \cdot d_{\text{idx}} \right) + N_{\text{DGDA}} \cdot S_{\text{state}} \quad \text{(bytes)}
+$$
 
 where the constant recurrent state is allocated once at model initialization:
 
-$$ S_{\text{state}} = 4 \cdot H \cdot d_k \cdot d_v \quad \text{(bytes)} $$
+$$
+S_{\text{state}} = 4 \cdot H \cdot d_k \cdot d_v \quad \text{(bytes)}
+$$
 
 ### Empirical KV-Cache Footprint (101M Model Tier)
 
@@ -86,7 +98,9 @@ In standard transformer models, generation latency degrades linearly (O(L)) as t
 Maba achieves strictly bounded **O(1) decode latency**:
 1. **DGDA Recurrence**: 75% of layers update their recurrent state in O(1) FLOPs without attending to past tokens:
 
-$$ S_t = \alpha_t \odot S_{t-1} + \beta_t \odot (k_t \otimes v_t) $$
+$$
+S_t = \alpha_t \odot S_{t-1} + \beta_t \odot (k_t \otimes v_t)
+$$
 
 2. **Bounded Attention Window**: The 5 MABA-SA layers evaluate attention strictly over:
    - 128 local window tokens + 4 initial sinks (132 tokens).

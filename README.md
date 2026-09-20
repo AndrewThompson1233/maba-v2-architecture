@@ -81,7 +81,7 @@ tags:
 > [!NOTE]
 > **Production Release of the Experimental Maba v1.5 Prototype**
 >
-> Maba v2 is the official production release and hardened evolution of the experimental [Maba v1.5-exp](https://github.com/AndrewThompson1233/maba-v1.5-exp-architecture) prototype ([Hugging Face](https://huggingface.co/AndrewThompson1233/maba-v1.5-exp-architecture)).
+> Maba v2 is the official production release and hardened evolution of the experimental [Maba v1.5-exp](https://huggingface.co/AndrewThompson1233/maba-v1.5-exp-architecture) prototype ([GitHub](https://github.com/AndrewThompson1233/maba-v1.5-exp-architecture)).
 >
 > This release provides a fully verified, stable, and substantially improved architecture:
 > - **Autograd & Dispatcher Fixes**: Completely resolved backward gradient propagation edge cases and fallback dispatcher issues that existed in v1.5 experimental builds.
@@ -117,9 +117,11 @@ Traditional dense transformers suffer from O(L²) prefill memory and O(L) linear
 
 ---
 
-## Scaling & Resource Specifications
+## Scaling & Benchmarks
 
 All parameter scaling laws, model tiers (100M to 30B), analytical KV-cache memory formulations, and empirical context scaling comparisons are documented in [SCALING.md](SCALING.md).
+
+Full hardware benchmark results — including decode dynamics, multi-architecture NIAH comparison, and Triton kernel ablation — are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md).
 
 ---
 
