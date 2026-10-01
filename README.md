@@ -72,7 +72,6 @@ tags:
     <a href="SCALING.md"><img src="https://img.shields.io/badge/Scaling-100M_to_30B-indigo.svg" alt="Scaling"/></a>
     <a href="BENCHMARK_REPORT.md"><img src="https://img.shields.io/badge/Context-1%2C000%2C000+-cyan.svg" alt="Context"/></a>
     <img src="https://img.shields.io/badge/Decode-O(1)%20Flat-purple.svg" alt="Decode O(1)"/>
-    <img src="https://img.shields.io/badge/Tests-649%20Passed-green.svg" alt="Tests"/>
   </p>
 </div>
 
@@ -84,14 +83,14 @@ Reference PyTorch implementation of the 3:1 hybrid architecture uniting linear r
 
 The model routes 75% of compute through constant-state recurrence and 25% through latent-compressed sparse attention with centroid routing.
 
-- Decode latency: 35–37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
+- Decode latency: 35-37 ms/token flat up to 1,000,000 tokens on consumer GPUs.
 - KV-cache footprint: 1.20 GB for 1M tokens in FP16 (compared to 48.8 GB for standard dense attention).
 - Retrieval: Single-needle retrieval at token #742,189 with Rank #1 out of 15,625 blocks.
 - Positional stability: Uses recurrent exponential decay (α_t) instead of RoPE to prevent phase distortion over long contexts.
 
 ---
 
-## Frontier Architectural Comparison
+## Architectural Comparison
 
 <p align="center">
   <img src="assets/architecture_comparison.svg" width="100%" alt="Architectural Comparison: Maba vs Qwen3.8-Flash-Next vs MiniCPM-5 vs Dense Transformer"/>
@@ -126,7 +125,7 @@ Full hardware benchmark results - including decode dynamics, multi-architecture 
   1. Local Sliding Window (128 tokens + 4 sinks).
   2. Sparse Top-32 Blocks (2,048 gathered tokens).
   3. Hierarchical Context Attention (HCA 64:1 compressed prefix).
-- **Multi-Backend Kernels**: [maba_sparse/kernels/](maba_sparse/kernels/) provides fused Triton GPU kernels (264k–375k tok/s on Tesla T4), CPU OpenMP parallel kernels, and PyTorch autograd fallbacks.
+- **Multi-Backend Kernels**: [maba_sparse/kernels/](maba_sparse/kernels/) provides fused Triton GPU kernels (264k-375k tok/s on GPU), CPU OpenMP parallel kernels, and PyTorch autograd fallbacks.
 
 ---
 
@@ -171,7 +170,7 @@ torchrun --nproc_per_node=2 train.py \
 
 ## Benchmark Suite
 
-All benchmark suites are consolidated in [benchmark.py](benchmark.py). Full hardware metrics on Tesla T4 GPUs are recorded in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md) and [benchmark_results.json](benchmark_results.json).
+All benchmark suites are consolidated in [benchmark.py](benchmark.py). Hardware benchmark metrics are in [BENCHMARK_REPORT.md](BENCHMARK_REPORT.md) and [benchmark_results.json](benchmark_results.json).
 
 ```bash
 # Frontier architectural comparison vs Qwen3.8-Flash-Next & MiniCPM-5
@@ -201,15 +200,15 @@ python benchmark.py --mode all
 
 ---
 
-## Test Suite
+## Tests
 
-Run the full automated unit test suite (649 tests):
+Run tests:
 
 ```bash
 pytest -q
 ```
 
-All 23 test modules in [tests/](tests/) verify causal masking, autograd graph integrity, memory invariance, numerical stability, and hardware kernel parity.
+Unit tests are in [tests/](tests/).
 
 ---
 

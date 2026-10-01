@@ -22,7 +22,7 @@
 
 ### Decode Step Dynamics
 
-Dense is faster than Maba at short contexts (128–4096 tokens) because the Dense baseline executes a single fused `scaled_dot_product_attention` call per layer with a KV-cache that fits entirely in GPU L2 cache. Total decode cost for 20 Dense layers at short context: ~15.8 ms.
+Dense is faster than Maba at short contexts (128-4096 tokens) because the Dense baseline executes a single fused `scaled_dot_product_attention` call per layer with a KV-cache that fits entirely in GPU L2 cache. Total decode cost for 20 Dense layers at short context: ~15.8 ms.
 
 Maba's decode path is structurally heavier regardless of context length:
 - **15 DGDA layers**: 3 gating heads + depthwise conv + matrix state update per layer.
@@ -78,7 +78,7 @@ Maba's dispatcher (`maba_sparse/kernels/dispatcher.py`) auto-selects the fastest
 
 | Backend | Throughput (tok/s) | Relative |
 | :--- | :---: | :---: |
-| **Triton GPU (fused SRAM tiling)** | **264,288 – 375,848** | **1.0x** |
+| **Triton GPU (fused SRAM tiling)** | **264,288 - 375,848** | **1.0x** |
 | CPU OpenMP (parallel vectorized) | 4,220 | 0.016x |
 | PyTorch Reference (autograd) | 1,850 | 0.007x |
 
@@ -118,7 +118,7 @@ The Triton backend fuses all DGDA gating, convolution, and state update operatio
 
 ## 5. Architectural Conclusions
 
-1. **Flat O(1) Autoregressive Decoding**: By maintaining linear recurrence across 75% of layers and bounding sparse attention to 32 gathered blocks + 128 local window tokens, per-token decode latency remains constant at 35–37 ms across all sequence lengths.
-2. **Extreme KV-Cache Compression**: MLA latent projection (d_c=128) combined with 64:1 hierarchical centroid pooling keeps 1,000,000-token KV-cache under 1.25 GB, enabling full 1M context processing on consumer GPUs with 6–8 GB VRAM.
+1. **Flat O(1) Autoregressive Decoding**: By maintaining linear recurrence across 75% of layers and bounding sparse attention to 32 gathered blocks + 128 local window tokens, per-token decode latency remains constant at 35-37 ms across all sequence lengths.
+2. **Extreme KV-Cache Compression**: MLA latent projection (d_c=128) combined with 64:1 hierarchical centroid pooling keeps 1,000,000-token KV-cache under 1.25 GB, enabling full 1M context processing on consumer GPUs with 6-8 GB VRAM.
 3. **NoPE Stability**: Eliminating Rotary Positional Embeddings in favor of recurrent exponential decay (alpha_t) prevents phase distortion and high-frequency noise over 640k+ token spans.
-4. **Triton Kernel Advantage**: Fused Triton GPU kernels deliver 63x–89x throughput gain over CPU and 143x–203x over PyTorch reference, making the architecture practical for real-time inference on commodity GPUs.
+4. **Triton Kernel Advantage**: Fused Triton GPU kernels deliver 63x-89x throughput gain over CPU and 143x-203x over PyTorch reference, making the architecture practical for real-time inference on commodity GPUs.
